@@ -1,0 +1,86 @@
+syntax = "proto3";
+import "tcp-conn.proto";
+
+package pb;
+
+message User {
+    string  username = 1;       // 用户名，唯一
+    string  nickname = 2;       // 昵称
+    string  password = 3;       // 密码
+    string  avatar_url = 4;     // 头像地址
+    int32   sex = 5;            // 性别
+    int64   birthday = 6;       // 生日
+    string  phone_num = 7;      // 手机号
+    int64   create_time = 8;    // 创建时间
+    int64   update_time = 9;   // 更新时间
+}
+
+message RegisterReq {
+    User user = 1;
+}
+
+message RegisterResp {
+}
+
+message AddFriendReq {
+    string user_id = 1;      // 用户id
+    string friend_id = 2;    // 好友id
+}
+
+message AddFriendResp {
+}
+
+message GetUserReq {
+    string username = 1;
+}
+
+message GetUserResp {
+    User user = 1;
+}
+
+message ListUsersReq {
+    string username = 1;  // 用户id
+}
+
+message ListUsersResp {
+    repeated User users = 1;
+}
+
+message SendMessageReq {
+    MessageItem item = 1;
+}
+
+message SendMessageResp {
+}
+
+message DelFriendReq {
+    string username = 1;      // 用户id
+    string friendName = 2;    // 好友id
+}
+
+message DelFriendResp {
+}
+
+message UpdateProfileReq {
+    User user = 1;
+}
+
+message UpdateProfileResp {
+}
+
+service CliInterfaceService {
+    // Register 用户注册
+    rpc Register(RegisterReq) returns(RegisterResp);
+    // AddFriend 添加好友
+    rpc AddFriend(AddFriendReq) returns(AddFriendResp);
+    // GetFriend 获取指定好友详细信息
+    rpc GetFriend(GetUserReq) returns(GetUserResp);
+    // ListFriends 列出指定用户的所有好友
+    rpc ListFriends(ListUsersReq) returns(ListUsersResp);
+    // SendMessage 发送消息给好友
+    rpc SendMessage(SendMessageReq) returns(SendMessageResp);
+    // DelFriend 删除指定好友
+    rpc DelFriend(DelFriendReq) returns(DelFriendResp);
+    // UpdateProfile 更新个人信息
+    rpc UpdateProfile(UpdateProfileReq) returns(UpdateProfileResp);
+}

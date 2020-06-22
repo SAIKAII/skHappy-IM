@@ -1,0 +1,14 @@
+syntax = "proto3";
+import "tcp-conn.proto";
+package pb;
+
+message DeliverMessageReq {
+    MessageItem item = 1;
+}
+
+message DeliverMessageResp {
+}
+
+service ConnService {
+    rpc DeliverMessage(DeliverMessageReq) returns (DeliverMessageResp);
+}

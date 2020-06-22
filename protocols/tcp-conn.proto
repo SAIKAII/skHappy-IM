@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package pb;
+
+// 请求类型
+enum PackageType {
+    PT_UNKNOWN      = 0; // 未知
+    PT_SIGN_IN      = 1; // 登录
+    PT_SYNC_MESSAGE = 2; // 拉取离线消息
+    PT_HEART_BEAT   = 3; // 心跳包
+    PT_MESSAGE      = 4; // 消息投递
+}
+
+message ConnInput {
+    PackageType package_type    = 1;
+    bytes       data            = 2;
+}
+
+message ConnOutput {
+    PackageType package_type    = 1;
+    int32       err_code        = 2; // 错误码
+    string      err_msg         = 3; // 错误信息
+    bytes       data            = 4;
+}
+
+message SignInReq {
+    string username = 1;
+    string password = 2;
+}
+
+message SignInResp {
+
+}
+
+message SyncReq {
+
+}
+
+message SyncResp {
+
+}
+
+message MessageOutput {
+    MessageItem item = 1;
+}
+
+/**************************************************************************/
+
+// 消息类型
+enum MessageType {
+    MT_UNKNOWN = 0; // 未知
+    MT_TEXT    = 1; // 文本
+    MT_IMAGE   = 2; // 图片
+}
+
+message MessageBody {
+    MessageType     type    = 1; // 消息类型
+    MessageContent  content = 2; // 消息体
+}
+
+message MessageContent {
+    oneof Content {
+        Text    text    = 1; // 文本消息
+        Image   image   = 2; // 图片消息
+    }
+}
+
+message MessageItem {
+    string          sender_name     = 1;
+    SenderType      sender_type     = 2;
+    string          receiver_name   = 3;
+    ReceiverType    receiver_type   = 4;
+    MessageBody     msg_body        = 5;
+    int64           send_time       = 6;
+}
+
+enum SenderType {
+    ST_UNKNOWN  = 0;    // 未知
+    ST_USER     = 1;    // 用户
+    ST_SYSTEM   = 2;    // 系统
+    ST_BUSINESS = 3;
+}
+
+enum ReceiverType {
+    RT_UNKNOWN  = 0;    // 未知
+    RT_USER     = 1;    // 用户
+    RT_GROUP    = 2;    // 群组
+}
+
+message Text {
+    string text = 1;
+}
+
+message Image {
+    string  id              = 1;  // 图片id
+    int32   width           = 2;  // 图片宽度
+    int32   height          = 3;  // 图片高度
+    string  url             = 4;  // 图片url
+    string  thumbnail_url   = 5;  // 图片缩略图url
+}
