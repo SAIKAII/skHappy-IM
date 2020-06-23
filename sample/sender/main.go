@@ -25,7 +25,11 @@ func main() {
 	// 列出所有好友
 	listFriends()
 	// 删除好友关系
-	deleteFriend()
+	//deleteFriend()
+	// 更新个人信息
+	updateProfile()
+	// 更换密码
+	changePassword()
 }
 
 func register() {
@@ -85,6 +89,34 @@ func deleteFriend() {
 		FriendName: "cnqowrn42j",
 	}
 	_, err := cc.DelFriend(context.TODO(), del)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func updateProfile() {
+	req := &pb.UpdateProfileReq{
+		User: &pb.User{
+			Username: "qffqwrtb231",
+			Nickname: "Smith",
+			Sex:      1,
+			Birthday: time.Date(1995, time.January, 10, 0, 0, 0, 0, time.UTC).Unix(),
+			PhoneNum: "12405762905",
+		},
+	}
+	_, err := cc.UpdateProfile(context.TODO(), req)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func changePassword() {
+	req := &pb.ChangePasswordReq{
+		Username:    "qffqwrtb231",
+		PrePassword: "123456",
+		Password:    "890567",
+	}
+	_, err := cc.ChangePassword(context.TODO(), req)
 	if err != nil {
 		panic(err)
 	}

@@ -55,7 +55,7 @@ message SendMessageResp {
 
 message DelFriendReq {
     string username = 1;      // 用户id
-    string friendName = 2;    // 好友id
+    string friend_name = 2;    // 好友id
 }
 
 message DelFriendResp {
@@ -66,6 +66,15 @@ message UpdateProfileReq {
 }
 
 message UpdateProfileResp {
+}
+
+message ChangePasswordReq {
+    string username     = 1;
+    string pre_password = 2;
+    string password     = 3;
+}
+
+message ChangePasswordResp {
 }
 
 service CliInterfaceService {
@@ -83,4 +92,6 @@ service CliInterfaceService {
     rpc DelFriend(DelFriendReq) returns(DelFriendResp);
     // UpdateProfile 更新个人信息
     rpc UpdateProfile(UpdateProfileReq) returns(UpdateProfileResp);
+    // ChangePassword 更换密码
+    rpc ChangePassword(ChangePasswordReq) returns(ChangePasswordResp);
 }

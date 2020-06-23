@@ -129,6 +129,7 @@ func (cf *CliInterfaceServer) DelFriend(ctx context.Context, req *pb.DelFriendRe
 
 func (cf *CliInterfaceServer) UpdateProfile(ctx context.Context, req *pb.UpdateProfileReq) (*pb.UpdateProfileResp, error) {
 	err := services.IAccountService.UpdateProfile(services.AccountUpdateDTO{
+		Username: req.User.Username,
 		Nickname: req.User.Nickname,
 		Password: req.User.Password,
 		Avatar:   req.User.AvatarUrl,
@@ -141,4 +142,17 @@ func (cf *CliInterfaceServer) UpdateProfile(ctx context.Context, req *pb.UpdateP
 	}
 
 	return &pb.UpdateProfileResp{}, nil
+}
+
+func (cf *CliInterfaceServer) ChangePassword(ctx context.Context, req *pb.ChangePasswordReq) (*pb.ChangePasswordResp, error) {
+	err := services.IAccountService.ChangePassword(services.ChangePasswordDTO{
+		Username:    req.Username,
+		PrePassword: req.PrePassword,
+		Password:    req.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.ChangePasswordResp{}, nil
 }

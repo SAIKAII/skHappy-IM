@@ -15,6 +15,7 @@ type AccountService interface {
 	GetAccount(username string) (*AccountReturnDTO, error)
 	GetAccounts(username string) ([]*AccountReturnDTO, error)
 	UpdateProfile(dto AccountUpdateDTO) error
+	ChangePassword(ChangePasswordDTO) error
 }
 
 type AccountCreatedDTO struct {
@@ -28,6 +29,7 @@ type AccountCreatedDTO struct {
 }
 
 type AccountUpdateDTO struct {
+	Username string
 	Nickname string
 	Password string
 	Avatar   string
@@ -43,4 +45,10 @@ type AccountReturnDTO struct {
 	Sex      int8
 	Birthday time.Time
 	PhoneNum string
+}
+
+type ChangePasswordDTO struct {
+	Username    string
+	PrePassword string
+	Password    string
 }

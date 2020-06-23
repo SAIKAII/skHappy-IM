@@ -50,3 +50,28 @@ func (a *UserDao) GetAll(allUsers []string) ([]*User, error) {
 
 	return users, nil
 }
+
+func (a *UserDao) UpdateProfile(u *User) error {
+	if err := a.DB.Model(&u).Updates(map[string]interface{}{
+		"nickname":  u.Nickname,
+		"avatar":    u.Avatar,
+		"sex":       u.Sex,
+		"birthday":  u.Birthday,
+		"phone_num": u.PhoneNum,
+	}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *UserDao) UpdatePassword(u *User) error {
+	if err := a.DB.Model(&u).Updates(map[string]interface{}{
+		"salt":     u.Salt,
+		"password": u.Password,
+	}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
