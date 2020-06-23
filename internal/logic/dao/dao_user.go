@@ -44,7 +44,7 @@ func (a *UserDao) Insert(u *User) error {
 
 func (a *UserDao) GetAll(allUsers []string) ([]*User, error) {
 	users := make([]*User, 0)
-	if err := a.DB.Where("username IN (?)", allUsers).Find(users).Error; err != nil {
+	if err := a.DB.Where("username IN (?)", allUsers).Find(&users).Error; err != nil {
 		return nil, err
 	}
 

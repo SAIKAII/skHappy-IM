@@ -23,7 +23,7 @@ func (r *relationshipService) CreateRelationship(userA, userB string) error {
 	}
 
 	res, err := r.get(rel.UserA, rel.UserB)
-	if err != nil {
+	if err != nil && err != dao.DAO_ERROR_RECORD_NOT_FOUND {
 		return err
 	}
 	db := base.Database()
@@ -60,7 +60,8 @@ func (r *relationshipService) DeleteRelationship(userA, userB string) error {
 }
 
 func (r *relationshipService) GetAllFriends(username string) ([]string, error) {
-	relDao := dao.RelationShipDao{}
+	db := base.Database()
+	relDao := dao.RelationShipDao{DB: db}
 	rels, err := relDao.GetAll(username)
 	if err != nil {
 		return nil, err
@@ -80,8 +81,8 @@ func (r *relationshipService) GetAllFriends(username string) ([]string, error) {
 
 func (r *relationshipService) get(userA, userB string) (*dao.Relationship, error) {
 	db := base.Database()
-	dao := dao.RelationShipDao{DB: db}
-	res, err := dao.GetOne(userA, userB)
+	relDao := dao.RelationShipDao{DB: db}
+	res, err := relDao.GetOne(userA, userB)
 	if err != nil {
 		return nil, err
 	}

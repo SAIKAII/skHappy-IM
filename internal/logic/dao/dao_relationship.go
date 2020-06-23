@@ -34,13 +34,17 @@ func (r *RelationShipDao) Insert(rel *Relationship) error {
 
 // Update 更新记录
 func (r *RelationShipDao) Update(rel *Relationship) error {
-	panic("")
+	if err := r.DB.Table("relationships").Where("user_a = ? and user_b = ?",
+		rel.UserA, rel.UserB).Update("is_deleted", rel.IsDeleted).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetAll 获取指定用户的所有好友信息
 func (r *RelationShipDao) GetAll(username string) ([]*Relationship, error) {
 	rels := make([]*Relationship, 0)
-	if err := r.DB.Find(rels, "user_a = ? or user_b = ?", username, username).Error; err != nil {
+	if err := r.DB.Find(&rels, "user_a = ? or user_b = ?", username, username).Error; err != nil {
 		return nil, err
 	}
 
@@ -49,7 +53,7 @@ func (r *RelationShipDao) GetAll(username string) ([]*Relationship, error) {
 
 // Delete 删除两人关系
 func (r *RelationShipDao) Delete(userA, userB string) error {
-	if err := r.DB.Where("user_a = ? and user_b = ?", userA, userB).Update("is_deleted", 1).Error; err != nil {
+	if err := r.DB.Table("relationships").Where("user_a = ? and user_b = ?", userA, userB).Update("is_deleted", 1).Error; err != nil {
 		return err
 	}
 

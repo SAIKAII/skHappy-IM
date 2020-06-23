@@ -22,6 +22,7 @@ func (b *BootApplication) Start() {
 	// 安装
 	b.setup()
 	// 启动
+	b.start()
 }
 
 // init 程序初始化

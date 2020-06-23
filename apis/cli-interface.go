@@ -5,12 +5,40 @@ import (
 	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
+	"net"
 	"time"
 )
 
 var _ pb.CliInterfaceServiceServer = &CliInterfaceServer{}
 
 type CliInterfaceServer struct {
+}
+
+func StartCliRPCServer(addr string) {
+	cliListen, err := net.Listen("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+
+	efp := keepalive.EnforcementPolicy{
+		MinTime:             10 * time.Second,
+		PermitWithoutStream: true,
+	}
+	sp := keepalive.ServerParameters{
+		MaxConnectionIdle:     60 * time.Second,
+		MaxConnectionAge:      1 * time.Hour,
+		MaxConnectionAgeGrace: 5 * time.Second,
+		Time:                  10 * time.Second,
+		Timeout:               1 * time.Second,
+	}
+	cliServer := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(efp), grpc.KeepaliveParams(sp))
+	pb.RegisterCliInterfaceServiceServer(cliServer, &CliInterfaceServer{})
+	err = cliServer.Serve(cliListen)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (cf *CliInterfaceServer) Register(ctx context.Context, req *pb.RegisterReq) (*pb.RegisterResp, error) {
