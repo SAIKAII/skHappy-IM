@@ -38,7 +38,7 @@ func (mr *MsgRecvDao) InsertOne(msgRecv *MsgRecv) error {
 }
 
 func (mr *MsgRecvDao) UpdateLastSeqId(username string, lastSeqId uint64) error {
-	if err := mr.DB.Where("username = ?", username).Update("last_seq_id", lastSeqId).Error; err != nil {
+	if err := mr.DB.Table("msg_recvs").Where("username = ?", username).Update("last_seq_id", lastSeqId).Error; err != nil {
 		return err
 	}
 	return nil

@@ -15,8 +15,8 @@ type Message struct {
 	Content      string     `gorm:"content"`
 	SeqId        uint64     `gorm:"seq_id"`
 	SendTime     *time.Time `gorm:"sender_time"`
-	CreatedAt    *time.Time `gorm:"created_at,omitempty"`
-	UpdatedAt    *time.Time `gorm:"updated_at,omitempty"`
+	CreatedAt    *time.Time `gorm:"create_time,omitempty"`
+	UpdatedAt    *time.Time `gorm:"update_time,omitempty"`
 }
 
 type MessageDao struct {

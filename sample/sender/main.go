@@ -19,7 +19,7 @@ func main() {
 	// 注册帐号
 	//register()
 	// 添加好友
-	addFriend()
+	//addFriend()
 	// 获取好友信息
 	getFriend()
 	// 列出所有好友
@@ -29,7 +29,9 @@ func main() {
 	// 更新个人信息
 	updateProfile()
 	// 更换密码
-	changePassword()
+	//changePassword()
+	// 发送消息
+	sendMessage()
 }
 
 func register() {
@@ -117,6 +119,37 @@ func changePassword() {
 		Password:    "890567",
 	}
 	_, err := cc.ChangePassword(context.TODO(), req)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func sendMessage() {
+	t := &pb.Text{
+		Text: "Hello world",
+	}
+	ct := &pb.MessageContent_Text{
+		Text: t,
+	}
+	mc := &pb.MessageContent{
+		Content: ct,
+	}
+	msg := &pb.MessageBody{
+		Type:    pb.MessageType_MT_TEXT,
+		Content: mc,
+	}
+	item := &pb.MessageItem{
+		SenderName:   "cnqowrn42j",
+		SenderType:   pb.SenderType_ST_USER,
+		ReceiverName: "qffqwrtb231",
+		ReceiverType: pb.ReceiverType_RT_USER,
+		MsgBody:      msg,
+		SendTime:     time.Now().Unix(),
+	}
+	req := &pb.SendMessageReq{
+		Item: item,
+	}
+	_, err := cc.SendMessage(context.TODO(), req)
 	if err != nil {
 		panic(err)
 	}

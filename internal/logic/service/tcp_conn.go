@@ -99,8 +99,8 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 	}
 
 	rdConn := base.RedisConn()
-	ok, err := redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, th.host))
-	if err != nil || !ok {
+	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, th.host))
+	if err != nil {
 		resp.ErrCode = common.INTERNEL_UNKNOWN_ERROR
 		resp.ErrMsg = "保存登录状态失败"
 		o, _ := proto.Marshal(resp)

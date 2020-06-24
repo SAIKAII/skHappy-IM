@@ -28,6 +28,7 @@ func (r *RPCCliStarter) Setup(ctx infra.StarterContext) {
 		PermitWithoutStream: true,
 	}
 	rpcCli.dialOpt = append(rpcCli.dialOpt, grpc.WithKeepaliveParams(kalv))
+	rpcCli.dialOpt = append(rpcCli.dialOpt, grpc.WithInsecure())
 }
 
 var rpcCli *RPCCli

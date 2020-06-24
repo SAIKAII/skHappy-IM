@@ -17,7 +17,8 @@ type messageService struct {
 func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
 	tm := time.Unix(req.Item.SendTime, 0)
 	typ, content := services.PBToContent(req.Item.MsgBody)
-	seqId, err := cache.Incr(req.Item.ReceiverName)
+	key := cache.UerKey(req.Item.ReceiverName)
+	seqId, err := cache.Incr(key)
 	if err != nil {
 		return err
 	}
