@@ -8,6 +8,7 @@ import (
 	"github.com/SAIKAII/skHappy-IM/services/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/gomodule/redigo/redis"
+	"log"
 )
 
 type ConnData struct {
@@ -50,6 +51,7 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 	}
 	if err != nil {
 		// TODO
+		log.Println(err)
 	}
 }
 
@@ -57,6 +59,7 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 func (th *TCPHandler) OnClose(conn *coma.Conn) error {
 	cData := conn.Data().(*ConnData)
 	rdConn := base.RedisConn()
+	defer rdConn.Close()
 	_, err := rdConn.Do("HDEL", base.USER_ADDR, cData.Username)
 	base.ConnectionManager().DeleteConn(cData.Username)
 	return err
@@ -99,6 +102,7 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 	}
 
 	rdConn := base.RedisConn()
+	defer rdConn.Close()
 	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, th.host))
 	if err != nil {
 		resp.ErrCode = common.INTERNEL_UNKNOWN_ERROR
@@ -127,6 +131,7 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {
 	cData := conn.Data().(*ConnData)
 	rdConn := base.RedisConn()
+	defer rdConn.Close()
 	exist, err := redis.Bool(rdConn.Do("HEXISTS", base.USER_ADDR, cData.Username))
 	if err != nil {
 		return err

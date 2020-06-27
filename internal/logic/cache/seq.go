@@ -13,6 +13,7 @@ func UerKey(username string) string {
 
 func UpdateUserSeq(name string, seqId uint64) error {
 	rdConn := base.RedisConn()
+	defer rdConn.Close()
 	_, err := rdConn.Do("SET", name, seqId)
 	if err != nil {
 		return err
@@ -23,6 +24,7 @@ func UpdateUserSeq(name string, seqId uint64) error {
 
 func Incr(name string) (uint64, error) {
 	rdConn := base.RedisConn()
+	defer rdConn.Close()
 	seqId, err := redis.Uint64(rdConn.Do("INCR", name))
 	if err != nil {
 		return 0, err

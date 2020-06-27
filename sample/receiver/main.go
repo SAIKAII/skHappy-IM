@@ -1,33 +1,47 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
+	"github.com/SAIKAII/skHappy-IM/sample/long_link"
 	codec "github.com/SAIKAII/skHappy-IM/sample/util"
 	"github.com/golang/protobuf/proto"
-	"log"
+	"google.golang.org/grpc"
 	"net"
 	"os"
 	"os/signal"
 	"time"
 )
 
+var cc pb.CliInterfaceServiceClient
+
 func main() {
+	cli, err := grpc.Dial("127.0.0.1:8088", grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	cc = pb.NewCliInterfaceServiceClient(cli)
+
 	conn, err := net.Dial("tcp", "127.0.0.1:8090")
 	if err != nil {
 		panic(err)
 	}
 
 	cdc := codec.NewCodec(conn)
-	go readResp(cdc)
+	go long_link.ReadResp(cdc, getMessage)
 
 	// 登录
-	err = login(cdc)
+	req := &pb.SignInReq{
+		Username: "qffqwrtb231",
+		Password: "890567",
+	}
+	err = long_link.Login(cdc, req)
 	if err != nil {
 		panic(err)
 	}
 
-	go heartBeat(cdc)
+	go long_link.HeartBeat(cdc)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, os.Kill)
@@ -38,70 +52,6 @@ func main() {
 	}
 }
 
-func readResp(cdc *codec.Codec) {
-	for !cdc.IsClosed() {
-		n, err := cdc.Read()
-		if err != nil {
-			log.Println(err)
-			break
-		} else if n == 0 {
-			continue
-		}
-
-		b, _, err := cdc.Decode()
-		if err != nil {
-			log.Println(err)
-			break
-		}
-
-		var data pb.ConnOutput
-		proto.Unmarshal(b, &data)
-		switch data.PackageType {
-		case pb.PackageType_PT_SIGN_IN:
-			fmt.Println("[SignIn]=>", data.ErrCode, data.ErrMsg)
-		case pb.PackageType_PT_MESSAGE:
-			fmt.Println("[Message]=>", data.ErrCode, data.ErrMsg)
-			getMessage(data.Data)
-		case pb.PackageType_PT_HEART_BEAT:
-			fmt.Println("[HeartBeat]=>", data.ErrCode, data.ErrMsg)
-		default:
-			fmt.Println("Data Error!")
-		}
-	}
-}
-
-func login(cdc *codec.Codec) error {
-	req := &pb.SignInReq{
-		Username: "qffqwrtb231",
-		Password: "890567",
-	}
-	o, _ := proto.Marshal(req)
-	in := &pb.ConnInput{
-		PackageType: pb.PackageType_PT_SIGN_IN,
-		Data:        o,
-	}
-	d, _ := proto.Marshal(in)
-
-	return cdc.Write(cdc.Encode(d))
-}
-
-func heartBeat(cdc *codec.Codec) {
-	for {
-		time.Sleep(1 * time.Second)
-
-		hb := &pb.ConnInput{
-			PackageType: pb.PackageType_PT_HEART_BEAT,
-			Data:        nil,
-		}
-		o, _ := proto.Marshal(hb)
-		err := cdc.Write(cdc.Encode(o))
-		if err != nil {
-			log.Println(err)
-		}
-	}
-
-}
-
 func getMessage(data []byte) error {
 	var content pb.MessageOutput
 	err := proto.Unmarshal(data, &content)
@@ -109,6 +59,44 @@ func getMessage(data []byte) error {
 		return err
 	}
 
-	fmt.Println(content.Item)
+	fmt.Println("[From]", content.Item.SenderName, "[To]", content.Item.ReceiverName,
+		"[Type]", content.Item.MsgBody.Type, "[content]", content.Item.MsgBody.Content.GetText().Text)
+
+	retMessage(content)
+	//time.Sleep(1 * time.Second)
+	return nil
+}
+
+func retMessage(resp pb.MessageOutput) error {
+	t := &pb.Text{
+		Text: resp.Item.MsgBody.Content.GetText().Text + "-",
+	}
+	ct := &pb.MessageContent_Text{
+		Text: t,
+	}
+	mc := &pb.MessageContent{
+		Content: ct,
+	}
+	msg := &pb.MessageBody{
+		Type:    pb.MessageType_MT_TEXT,
+		Content: mc,
+	}
+	item := &pb.MessageItem{
+		SenderName:   resp.Item.ReceiverName,
+		SenderType:   pb.SenderType_ST_USER,
+		ReceiverName: resp.Item.SenderName,
+		ReceiverType: pb.ReceiverType_RT_USER,
+		MsgBody:      msg,
+		SendTime:     time.Now().Unix(),
+	}
+	req := &pb.SendMessageReq{
+		Item: item,
+	}
+
+	_, err := cc.SendMessage(context.TODO(), req)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

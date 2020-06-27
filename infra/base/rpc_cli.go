@@ -45,6 +45,7 @@ func NewRPCCli() *RPCCli {
 
 func (r *RPCCli) Dialer(key, field string) (*grpc.ClientConn, error) {
 	rdConn := RedisConn()
+	defer rdConn.Close()
 	// 从redis缓存中获取指定用户连接到的服务器IP:Port
 	addr, err := redis.String(rdConn.Do("HGET", key, field))
 	if err != nil {

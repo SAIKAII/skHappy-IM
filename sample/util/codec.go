@@ -30,14 +30,12 @@ func (c *Codec) Read() (int, error) {
 	n, err := c.conn.Read(c.buffer[c.bufferEnd:])
 	if err != nil {
 		if e, ok := err.(net.Error); ok && e.Timeout() {
-			//c.CloseConnection()
-			//c.closed = true
 			return 0, nil
-		}
-		if c.bufferEnd == 0 {
+		} else {
+			c.CloseConnection()
+			c.closed = true
 			return 0, err
 		}
-
 	}
 
 	c.bufferEnd += n
