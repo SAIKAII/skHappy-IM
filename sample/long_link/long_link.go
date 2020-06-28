@@ -38,7 +38,8 @@ func ReadResp(cdc *codec.Codec, mh MessageHandle) {
 		case pb.PackageType_PT_HEART_BEAT:
 			fmt.Println("[HeartBeat]=>", data.ErrCode, data.ErrMsg)
 		case pb.PackageType_PT_SYNC_MESSAGE:
-
+			fmt.Println("[SYNC]=>", data.ErrCode, data.ErrMsg)
+			showSync(data.Data)
 		default:
 			fmt.Println("Data Error!")
 		}
@@ -72,4 +73,24 @@ func HeartBeat(cdc *codec.Codec) {
 		}
 	}
 
+}
+
+func Sync(cdc *codec.Codec, req *pb.SyncReq) error {
+	o, _ := proto.Marshal(req)
+	in := &pb.ConnInput{
+		PackageType: pb.PackageType_PT_SYNC_MESSAGE,
+		Data:        o,
+	}
+	d, _ := proto.Marshal(in)
+
+	return cdc.Write(cdc.Encode(d))
+}
+
+func showSync(data []byte) {
+	var content pb.SyncResp
+	proto.Unmarshal(data, &content)
+	for _, v := range content.Msg {
+		fmt.Println("[From]", v.SenderName, "[To]", v.ReceiverName, "[Time]", v.SendTime)
+		fmt.Println("[Content]", v.MsgBody.Content.GetText().Text)
+	}
 }

@@ -23,6 +23,7 @@ message ConnOutput {
     bytes       data            = 4;
 }
 
+/**************************************************************************/
 message SignInReq {
     string username = 1;
     string password = 2;
@@ -33,11 +34,13 @@ message SignInResp {
 }
 
 message SyncReq {
-
+    string username     = 1;
+    uint64 last_seq_id  = 2;
 }
 
 message SyncResp {
-
+    repeated MessageItem msg = 1;
+    bool has_more = 2;
 }
 
 message MessageOutput {

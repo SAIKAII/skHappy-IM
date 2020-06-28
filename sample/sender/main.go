@@ -20,25 +20,56 @@ func main() {
 		panic(err)
 	}
 	cc = pb.NewCliInterfaceServiceClient(cli)
+
+	selfName := "cnqowrn42j"
+	friendName := "qffqwrtb231"
 	// 注册帐号
 	//register()
 	// 添加好友
-	//addFriend()
+	//addReq := &pb.AddFriendReq{
+	//	UserId:   selfName,
+	//	FriendId: friendName,
+	//}
+	//addFriend(addReq)
 	// 获取好友信息
-	getFriend()
+	getReq := &pb.GetUserReq{
+		Username: friendName,
+	}
+	getFriend(getReq)
 	// 列出所有好友
-	listFriends()
+	listReq := &pb.ListUsersReq{
+		Username: selfName,
+	}
+	listFriends(listReq)
 	// 删除好友关系
-	//deleteFriend()
+	//delReq := &pb.DelFriendReq{
+	//	Username:   selfName,
+	//	FriendName: friendName,
+	//}
+	//deleteFriend(delReq)
 	// 更新个人信息
-	//updateProfile()
+	//updateReq := &pb.UpdateProfileReq{
+	//	User: &pb.User{
+	//		Username: selfName,
+	//		Nickname: "Smith",
+	//		Sex:      1,
+	//		Birthday: time.Date(1995, time.January, 10, 0, 0, 0, 0, time.UTC).Unix(),
+	//		PhoneNum: "12405762905",
+	//	},
+	//}
+	//updateProfile(updateReq)
 	// 更换密码
-	//changePassword()
+	//newPwdReq := &pb.ChangePasswordReq{
+	//	Username:    selfName,
+	//	PrePassword: "123456",
+	//	Password:    "890567",
+	//}
+	//changePassword(newPwdReq)
 	// 发送消息
-	sendMessage()
+	sendMessage(selfName, friendName)
 
 	// tcp测试
-	tcpConnTest()
+	tcpConnTest(selfName)
 }
 
 func register() {
@@ -59,21 +90,14 @@ func register() {
 	}
 }
 
-func addFriend() {
-	friend := &pb.AddFriendReq{
-		UserId:   "qffqwrtb231",
-		FriendId: "cnqowrn42j",
-	}
+func addFriend(friend *pb.AddFriendReq) {
 	_, err := cc.AddFriend(context.TODO(), friend)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func getFriend() {
-	user := &pb.GetUserReq{
-		Username: "cnqowrn42j",
-	}
+func getFriend(user *pb.GetUserReq) {
 	resp, err := cc.GetFriend(context.TODO(), user)
 	if err != nil {
 		panic(err)
@@ -81,10 +105,7 @@ func getFriend() {
 	fmt.Println("[GetFriend]=>", resp.User)
 }
 
-func listFriends() {
-	user := &pb.ListUsersReq{
-		Username: "qffqwrtb231",
-	}
+func listFriends(user *pb.ListUsersReq) {
 	resp, err := cc.ListFriends(context.TODO(), user)
 	if err != nil {
 		panic(err)
@@ -92,46 +113,28 @@ func listFriends() {
 	fmt.Println("[ListFriends]=>", resp.Users)
 }
 
-func deleteFriend() {
-	del := &pb.DelFriendReq{
-		Username:   "qffqwrtb231",
-		FriendName: "cnqowrn42j",
-	}
+func deleteFriend(del *pb.DelFriendReq) {
 	_, err := cc.DelFriend(context.TODO(), del)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func updateProfile() {
-	req := &pb.UpdateProfileReq{
-		User: &pb.User{
-			Username: "qffqwrtb231",
-			Nickname: "Smith",
-			Sex:      1,
-			Birthday: time.Date(1995, time.January, 10, 0, 0, 0, 0, time.UTC).Unix(),
-			PhoneNum: "12405762905",
-		},
-	}
-	_, err := cc.UpdateProfile(context.TODO(), req)
+func updateProfile(profile *pb.UpdateProfileReq) {
+	_, err := cc.UpdateProfile(context.TODO(), profile)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func changePassword() {
-	req := &pb.ChangePasswordReq{
-		Username:    "qffqwrtb231",
-		PrePassword: "123456",
-		Password:    "890567",
-	}
-	_, err := cc.ChangePassword(context.TODO(), req)
+func changePassword(newPwd *pb.ChangePasswordReq) {
+	_, err := cc.ChangePassword(context.TODO(), newPwd)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func sendMessage() {
+func sendMessage(sender, receiver string) {
 	t := &pb.Text{
 		Text: "Hello world",
 	}
@@ -146,9 +149,9 @@ func sendMessage() {
 		Content: mc,
 	}
 	item := &pb.MessageItem{
-		SenderName:   "cnqowrn42j",
+		SenderName:   sender,
 		SenderType:   pb.SenderType_ST_USER,
-		ReceiverName: "qffqwrtb231",
+		ReceiverName: receiver,
 		ReceiverType: pb.ReceiverType_RT_USER,
 		MsgBody:      msg,
 		SendTime:     time.Now().Unix(),
@@ -162,7 +165,7 @@ func sendMessage() {
 	}
 }
 
-func tcpConnTest() {
+func tcpConnTest(selfName string) {
 	conn, err := net.Dial("tcp", "127.0.0.1:8090")
 	if err != nil {
 		panic(err)
@@ -173,7 +176,7 @@ func tcpConnTest() {
 
 	// 登录
 	req := &pb.SignInReq{
-		Username: "cnqowrn42j",
+		Username: selfName,
 		Password: "123456",
 	}
 	err = long_link.Login(cdc, req)

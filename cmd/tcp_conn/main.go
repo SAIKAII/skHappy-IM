@@ -24,9 +24,9 @@ func init() {
 }
 
 func main() {
-	tcpAddr := "127.0.0.1:8089"
+	tcpAddr := "127.0.0.1"
 	// 注册RPC Server
-	go apis.StartConnRPCServer(tcpAddr)
+	go apis.StartConnRPCServer(fmt.Sprintf("%s:%d", tcpAddr, 8089))
 
 	// 启动TCP监控
 	th := service.NewTCPHandler(tcpAddr)

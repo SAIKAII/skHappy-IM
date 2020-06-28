@@ -1,8 +1,10 @@
 package service
 
 import (
+	"fmt"
 	coma "github.com/SAIKAII/go-conn-manager"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
+	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
 	"github.com/SAIKAII/skHappy-IM/services/common"
@@ -103,7 +105,7 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
-	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, th.host))
+	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, fmt.Sprintf("%s:%d", th.host, 8089)))
 	if err != nil {
 		resp.ErrCode = common.INTERNEL_UNKNOWN_ERROR
 		resp.ErrMsg = "保存登录状态失败"
@@ -125,7 +127,58 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 }
 
 func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
-	return nil
+	var input pb.SyncReq
+	output := &pb.ConnOutput{
+		PackageType: pb.PackageType_PT_SYNC_MESSAGE,
+		Data:        nil,
+	}
+	err := proto.Unmarshal(data, &input)
+	if err != nil {
+		output.ErrCode = common.CLIENT_REQUEST_PARAMS_ERROR
+		output.ErrMsg = err.Error()
+		o, _ := proto.Marshal(output)
+		return coma.PacketToPeer(conn, o)
+	}
+
+	db := base.Database()
+	msgDao := dao.MessageDao{DB: db}
+	res, err := msgDao.GetAllRecvByLastSeqId(input.Username, input.LastSeqId)
+	if err != nil {
+		output.ErrCode = common.INTERNEL_UNKNOWN_ERROR
+		output.ErrMsg = err.Error()
+		o, _ := proto.Marshal(output)
+		return coma.PacketToPeer(conn, o)
+	}
+
+	var resp pb.SyncResp
+	resp.Msg = make([]*pb.MessageItem, 0, len(res))
+	resp.HasMore = false
+	for _, v := range res {
+		mb := &pb.MessageBody{
+			Type: pb.MessageType(v.Type),
+		}
+		if pb.MessageType(v.Type) == pb.MessageType_MT_TEXT {
+			t := &pb.Text{Text: v.Content}
+			ct := &pb.MessageContent_Text{Text: t}
+			mb.Content = &pb.MessageContent{Content: ct}
+		} else if pb.MessageType(v.Type) == pb.MessageType_MT_IMAGE {
+			// TODO
+		}
+		item := &pb.MessageItem{
+			SenderName:   v.Sender,
+			SenderType:   pb.SenderType(v.SenderType),
+			ReceiverName: v.Receiver,
+			ReceiverType: pb.ReceiverType(v.ReceiverType),
+			MsgBody:      mb,
+			SendTime:     v.SendTime.Unix(),
+		}
+		resp.Msg = append(resp.Msg, item)
+	}
+	d, _ := proto.Marshal(&resp)
+	output.Data = d
+	o, _ := proto.Marshal(output)
+
+	return coma.PacketToPeer(conn, o)
 }
 
 func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {

@@ -43,6 +43,15 @@ func main() {
 
 	go long_link.HeartBeat(cdc)
 
+	// 拉取离线消息
+	sync := &pb.SyncReq{
+		Username:  "qffqwrtb231",
+		LastSeqId: 70,
+	}
+	err = long_link.Sync(cdc, sync)
+	if err != nil {
+		panic(err)
+	}
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, os.Kill)
 	select {

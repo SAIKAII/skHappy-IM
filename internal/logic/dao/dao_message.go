@@ -23,9 +23,9 @@ type MessageDao struct {
 	DB *gorm.DB
 }
 
-func (m *MessageDao) GetOneBySeqId(seqId uint64) (*Message, error) {
+func (m *MessageDao) GetRecvBySeqId(username string, seqId uint64) (*Message, error) {
 	msg := &Message{}
-	if err := m.DB.First(&msg, "seq_id = ?", seqId).Error; err != nil {
+	if err := m.DB.First(&msg, "receiver = ? and seq_id = ?", username, seqId).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, DAO_ERROR_RECORD_NOT_FOUND
 		}
@@ -39,4 +39,15 @@ func (m *MessageDao) InsertOne(msg *Message) error {
 		return err
 	}
 	return nil
+}
+
+func (m *MessageDao) GetAllRecvByLastSeqId(username string, seqId uint64) ([]*Message, error) {
+	msgAll := make([]*Message, 0)
+	if err := m.DB.Find(&msgAll, "receiver = ? and seq_id >= ?", username, seqId).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, DAO_ERROR_RECORD_NOT_FOUND
+		}
+		return nil, err
+	}
+	return msgAll, nil
 }
