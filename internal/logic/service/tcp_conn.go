@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	coma "github.com/SAIKAII/go-conn-manager"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
@@ -60,7 +61,11 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 
 // OnClose 主动关闭连接或超时无心跳包时调用
 func (th *TCPHandler) OnClose(conn *coma.Conn) error {
-	cData := conn.Data().(*ConnData)
+	tmp := conn.Data()
+	if tmp == nil {
+		return errors.New("无该用户的相关连接信息")
+	}
+	cData := tmp.(*ConnData)
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	_, err := rdConn.Do("HDEL", base.USER_ADDR, cData.Username)
@@ -177,7 +182,11 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 }
 
 func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {
-	cData := conn.Data().(*ConnData)
+	tmp := conn.Data()
+	if tmp == nil {
+		return errors.New("无该用户的相关连接信息")
+	}
+	cData := tmp.(*ConnData)
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	exist, err := redis.Bool(rdConn.Do("HEXISTS", base.USER_ADDR, cData.Username))

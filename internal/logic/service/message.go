@@ -15,12 +15,39 @@ type messageService struct {
 }
 
 func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
-	tm := time.Unix(req.Item.SendTime, 0)
+	conn := base.ConnectionManager().GetConn(req.Item.ReceiverName)
+	if conn == nil {
+		// 对方不在线，保存消息到数据库后直接返回
+		return nil
+	}
+
+	output := &pb.MessageOutput{
+		Item:  req.Item,
+		SeqId: req.SeqId,
+	}
+	b, _ := proto.Marshal(output)
+	dmReq := &pb.ConnOutput{
+		PackageType: pb.PackageType_PT_MESSAGE,
+		ErrCode:     0,
+		ErrMsg:      "",
+		Data:        b,
+	}
+	o, _ := proto.Marshal(dmReq)
+	err := coma.PacketToPeer(conn, o)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *messageService) SaveMessage(req *pb.SendMessageReq) (uint64, error) {
 	typ, content := services.PBToContent(req.Item.MsgBody)
+	tm := time.Unix(req.Item.SendTime, 0)
 	key := cache.UserKey(req.Item.ReceiverName)
 	seqId, err := cache.Incr(key)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	db := base.Database()
@@ -29,7 +56,7 @@ func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
 	if seqId == 1 {
 		msgRecv, err := msgRecvDao.GetOne(req.Item.ReceiverName)
 		if err != nil {
-			return err
+			return 0, err
 		}
 
 		seqId = msgRecv.LastSeqId
@@ -59,23 +86,5 @@ func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
 
 	}
 
-	conn := base.ConnectionManager().GetConn(req.Item.ReceiverName)
-
-	output := &pb.MessageOutput{
-		Item: req.Item,
-	}
-	b, _ := proto.Marshal(output)
-	dmReq := &pb.ConnOutput{
-		PackageType: pb.PackageType_PT_MESSAGE,
-		ErrCode:     0,
-		ErrMsg:      "",
-		Data:        b,
-	}
-	o, _ := proto.Marshal(dmReq)
-	err = coma.PacketToPeer(conn, o)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return seqId, nil
 }

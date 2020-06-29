@@ -27,6 +27,7 @@ var IMessageService MessageService
 type MessageService interface {
 	SendToOne(*pb.DeliverMessageReq) error
 	//SendToGroup(MessageTransferDTO) error
+	SaveMessage(*pb.SendMessageReq) (uint64, error)
 }
 
 type MessageTransferDTO struct {

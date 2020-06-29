@@ -11,13 +11,7 @@ import (
 
 type MessageHandle func([]byte) error
 
-var jwtString string
-
-func JWT() string {
-	return jwtString
-}
-
-func ReadResp(cdc *codec.Codec, mh MessageHandle) {
+func ReadResp(cdc *codec.Codec, mh MessageHandle, c chan interface{}) {
 	for !cdc.IsClosed() {
 		n, err := cdc.Read()
 		if err != nil {
@@ -38,7 +32,8 @@ func ReadResp(cdc *codec.Codec, mh MessageHandle) {
 		switch data.PackageType {
 		case pb.PackageType_PT_SIGN_IN:
 			fmt.Println("[SignIn]=>", data.ErrCode, data.ErrMsg)
-			loginRet(data.Data)
+			jwtString := loginRet(data.Data)
+			c <- jwtString
 		case pb.PackageType_PT_MESSAGE:
 			fmt.Println("[Message]=>", data.ErrCode, data.ErrMsg)
 			mh(data.Data)
@@ -65,13 +60,13 @@ func Login(cdc *codec.Codec, req *pb.SignInReq) error {
 	return cdc.Write(cdc.Encode(d))
 }
 
-func loginRet(data []byte) {
+func loginRet(data []byte) string {
 	var resp pb.SignInResp
 	err := proto.Unmarshal(data, &resp)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-	jwtString = resp.Jwt
+	return resp.Jwt
 }
 
 func HeartBeat(cdc *codec.Codec) {

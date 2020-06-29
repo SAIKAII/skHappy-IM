@@ -7,6 +7,7 @@ import (
 	"github.com/SAIKAII/skHappy-IM/pkg/jwt"
 	"github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
+	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
@@ -140,14 +141,25 @@ func (cf *CliInterfaceServer) ListFriends(ctx context.Context, req *pb.ListUsers
 }
 
 func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessageReq) (*pb.SendMessageResp, error) {
+	seqId, err := services.IMessageService.SaveMessage(req)
+	if err != nil {
+		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
+			return nil, status.Errorf(codes.NotFound, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, err.Error())
+	}
 	rpcCli := base.NewRPCCli()
 	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
 	if err != nil {
+		if err == redis.ErrNil {
+			return &pb.SendMessageResp{}, nil
+		}
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
-		Item: req.Item,
+		Item:  req.Item,
+		SeqId: seqId,
 	})
 	if err != nil {
 		return nil, status.Errorf(status.Code(err), err.Error())

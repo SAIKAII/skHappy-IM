@@ -44,7 +44,8 @@ message SyncResp {
 }
 
 message MessageOutput {
-    MessageItem item = 1;
+    MessageItem item    = 1;
+    uint64      seq_id  = 2;
 }
 
 /**************************************************************************/
