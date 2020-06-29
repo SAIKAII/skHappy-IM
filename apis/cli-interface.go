@@ -3,6 +3,7 @@ package apis
 import (
 	"context"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
+	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
 	"github.com/SAIKAII/skHappy-IM/pkg/jwt"
 	"github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
@@ -22,6 +23,7 @@ type CliInterfaceServer struct {
 
 func StartCliRPCServer(addr string) {
 	cliListen, err := net.Listen("tcp", addr)
+	defer cliListen.Close()
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +69,10 @@ func cliInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServer
 		if err != nil {
 			return nil, status.Errorf(codes.Unauthenticated, err.Error())
 		}
+
+		ctx = metadata.AppendToOutgoingContext(ctx, "jwt", jwtString)
 	}
+
 	return handler(ctx, req)
 }
 
@@ -87,7 +92,7 @@ func (cf *CliInterfaceServer) Register(ctx context.Context, req *pb.RegisterReq)
 func (cf *CliInterfaceServer) AddFriend(ctx context.Context, req *pb.AddFriendReq) (*pb.AddFriendResp, error) {
 	err := services.IRelationshipService.CreateRelationship(req.UserId, req.FriendId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.AddFriendResp{}, nil
@@ -96,7 +101,10 @@ func (cf *CliInterfaceServer) AddFriend(ctx context.Context, req *pb.AddFriendRe
 func (cf *CliInterfaceServer) GetFriend(ctx context.Context, req *pb.GetUserReq) (*pb.GetUserResp, error) {
 	rdto, err := services.IAccountService.GetAccount(req.Username)
 	if err != nil {
-		return nil, err
+		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
+			return nil, status.Errorf(codes.NotFound, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.GetUserResp{
@@ -114,7 +122,7 @@ func (cf *CliInterfaceServer) GetFriend(ctx context.Context, req *pb.GetUserReq)
 func (cf *CliInterfaceServer) ListFriends(ctx context.Context, req *pb.ListUsersReq) (*pb.ListUsersResp, error) {
 	rdtos, err := services.IAccountService.GetAccounts(req.Username)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 	users := make([]*pb.User, len(rdtos))
 	for i, v := range rdtos {
@@ -135,14 +143,14 @@ func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessa
 	rpcCli := base.NewRPCCli()
 	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
 		Item: req.Item,
 	})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(status.Code(err), err.Error())
 	}
 
 	return &pb.SendMessageResp{}, nil
@@ -151,7 +159,7 @@ func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessa
 func (cf *CliInterfaceServer) DelFriend(ctx context.Context, req *pb.DelFriendReq) (*pb.DelFriendResp, error) {
 	err := services.IRelationshipService.DeleteRelationship(req.Username, req.FriendName)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.DelFriendResp{}, nil
@@ -168,7 +176,10 @@ func (cf *CliInterfaceServer) UpdateProfile(ctx context.Context, req *pb.UpdateP
 		PhoneNum: req.User.PhoneNum,
 	})
 	if err != nil {
-		return nil, err
+		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
+			return nil, status.Errorf(codes.NotFound, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.UpdateProfileResp{}, nil
@@ -181,7 +192,10 @@ func (cf *CliInterfaceServer) ChangePassword(ctx context.Context, req *pb.Change
 		Password:    req.Password,
 	})
 	if err != nil {
-		return nil, err
+		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
+			return nil, status.Errorf(codes.NotFound, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	return &pb.ChangePasswordResp{}, nil
