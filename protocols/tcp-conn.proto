@@ -30,7 +30,7 @@ message SignInReq {
 }
 
 message SignInResp {
-
+    string jwt = 1;
 }
 
 message SyncReq {

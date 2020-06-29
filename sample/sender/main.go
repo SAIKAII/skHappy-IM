@@ -15,14 +15,23 @@ import (
 var cc pb.CliInterfaceServiceClient
 
 func main() {
-	cli, err := grpc.Dial("127.0.0.1:8088", grpc.WithInsecure())
+	selfName := "cnqowrn42j"
+	friendName := "qffqwrtb231"
+	// tcp测试
+	go tcpConnTest(selfName)
+
+	// 等待token返回
+	for long_link.JWT() == "" {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	tk := &JWTSt{JWTString: long_link.JWT()}
+	cli, err := grpc.Dial("127.0.0.1:8088", grpc.WithInsecure(), grpc.WithPerRPCCredentials(tk))
 	if err != nil {
 		panic(err)
 	}
 	cc = pb.NewCliInterfaceServiceClient(cli)
 
-	selfName := "cnqowrn42j"
-	friendName := "qffqwrtb231"
 	// 注册帐号
 	//register()
 	// 添加好友
@@ -31,16 +40,6 @@ func main() {
 	//	FriendId: friendName,
 	//}
 	//addFriend(addReq)
-	// 获取好友信息
-	getReq := &pb.GetUserReq{
-		Username: friendName,
-	}
-	getFriend(getReq)
-	// 列出所有好友
-	listReq := &pb.ListUsersReq{
-		Username: selfName,
-	}
-	listFriends(listReq)
 	// 删除好友关系
 	//delReq := &pb.DelFriendReq{
 	//	Username:   selfName,
@@ -66,20 +65,29 @@ func main() {
 	//}
 	//changePassword(newPwdReq)
 	// 发送消息
-	sendMessage(selfName, friendName)
+	//sendMessage(selfName, friendName)
+	// 获取好友信息
+	getReq := &pb.GetUserReq{
+		Username: friendName,
+	}
+	getFriend(getReq)
+	// 列出所有好友
+	listReq := &pb.ListUsersReq{
+		Username: selfName,
+	}
+	listFriends(listReq)
 
-	// tcp测试
-	tcpConnTest(selfName)
+	select {}
 }
 
 func register() {
 	user := &pb.User{
-		Username: "qffqwrtb231",
-		Nickname: "SAIKAII",
+		Username: "ituen,vlos1",
+		Nickname: "Red",
 		Password: "123456",
 		Sex:      0,
 		Birthday: time.Date(1995, time.January, 10, 0, 0, 0, 0, time.UTC).Unix(),
-		PhoneNum: "12405762905",
+		PhoneNum: "12473762905",
 	}
 	in := &pb.RegisterReq{
 		User: user,

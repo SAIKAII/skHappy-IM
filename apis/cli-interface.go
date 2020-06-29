@@ -3,10 +3,14 @@ package apis
 import (
 	"context"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
+	"github.com/SAIKAII/skHappy-IM/pkg/jwt"
 	"github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"net"
 	"time"
 )
@@ -33,12 +37,38 @@ func StartCliRPCServer(addr string) {
 		Time:                  10 * time.Second,
 		Timeout:               1 * time.Second,
 	}
-	cliServer := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(efp), grpc.KeepaliveParams(sp))
+	cliServer := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(efp),
+		grpc.KeepaliveParams(sp),
+		grpc.UnaryInterceptor(cliInterceptor))
 	pb.RegisterCliInterfaceServiceServer(cliServer, &CliInterfaceServer{})
 	err = cliServer.Serve(cliListen)
 	if err != nil {
 		panic(err)
 	}
+}
+
+// cliInterceptor JWT认证
+func cliInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	if info.FullMethod != "/pb.CliInterfaceService/Register" {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, status.Errorf(codes.Unauthenticated, "从context中获取数据失败")
+		}
+
+		// 进行JWT获取与认证
+		var jwtString string
+		if v, ok := md["jwt"]; ok {
+			jwtString = v[0]
+		} else {
+			return nil, status.Errorf(codes.Unauthenticated, "获取JWT失败")
+		}
+
+		_, err := jwt.VerifyJWT(jwtString)
+		if err != nil {
+			return nil, status.Errorf(codes.Unauthenticated, err.Error())
+		}
+	}
+	return handler(ctx, req)
 }
 
 func (cf *CliInterfaceServer) Register(ctx context.Context, req *pb.RegisterReq) (*pb.RegisterResp, error) {

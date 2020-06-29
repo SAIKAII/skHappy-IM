@@ -7,7 +7,7 @@ import (
 
 const USER_SEQ = "user_seq:"
 
-func UerKey(username string) string {
+func UserKey(username string) string {
 	return USER_SEQ + username
 }
 

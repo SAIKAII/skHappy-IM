@@ -5,6 +5,7 @@ import (
 	coma "github.com/SAIKAII/go-conn-manager"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
+	"github.com/SAIKAII/skHappy-IM/pkg/jwt"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
 	"github.com/SAIKAII/skHappy-IM/services/common"
@@ -81,36 +82,37 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 	err := proto.Unmarshal(data, &input)
 	if err != nil {
 		// 对请求的数据unmarshal失败
-		resp.ErrCode = common.CLIENT_REQUEST_PARAMS_ERROR
-		resp.ErrMsg = err.Error()
-		o, _ := proto.Marshal(resp)
-		return coma.PacketToPeer(conn, o)
+		return th.handleError(conn, resp, common.CLIENT_REQUEST_PARAMS_ERROR, err.Error())
 	}
 
 	// 验证用户登录是否通过
 	err = services.IAuthService.SignInAuth(input.Username, input.Password)
 	if err != nil {
 		// 验证没通过
-		resp.ErrMsg = err.Error()
 		if err == services.AUTH_FAILURE {
-			resp.ErrCode = common.COMMON_PWD_NOT_MATCH_ERROR
+			return th.handleError(conn, resp, common.COMMON_PWD_NOT_MATCH_ERROR, err.Error())
 		} else if err == services.USER_NOT_FOUND {
-			resp.ErrCode = common.COMMON_USER_NOT_FOUND_ERROR
+			return th.handleError(conn, resp, common.COMMON_USER_NOT_FOUND_ERROR, err.Error())
 		} else {
-			resp.ErrCode = common.COMMON_UNKNOWN_ERROR
+			return th.handleError(conn, resp, common.COMMON_UNKNOWN_ERROR, err.Error())
 		}
-		o, _ := proto.Marshal(resp)
-		return coma.PacketToPeer(conn, o)
 	}
+
+	// 生成JWT
+	meta := make(map[string]interface{})
+	meta["username"] = input.Username
+	jwtString, err := jwt.NewJWT(meta)
+	if err != nil {
+		return th.handleError(conn, resp, common.INTERNEL_GENERATE_JWT_ERROR, "JWT生成失败")
+	}
+
+	output := &pb.SignInResp{Jwt: jwtString}
 
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, fmt.Sprintf("%s:%d", th.host, 8089)))
 	if err != nil {
-		resp.ErrCode = common.INTERNEL_UNKNOWN_ERROR
-		resp.ErrMsg = "保存登录状态失败"
-		o, _ := proto.Marshal(resp)
-		return coma.PacketToPeer(conn, o)
+		return th.handleError(conn, resp, common.INTERNEL_UNKNOWN_ERROR, "保存登录状态失败")
 	}
 
 	base.ConnectionManager().StoreConn(input.Username, conn)
@@ -118,7 +120,6 @@ func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
 	cData := &ConnData{Username: input.Username}
 	conn.SetData(cData)
 
-	output := &pb.SignInResp{}
 	b, _ := proto.Marshal(output)
 	resp.Data = b
 	o, _ := proto.Marshal(resp)
@@ -134,20 +135,14 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 	}
 	err := proto.Unmarshal(data, &input)
 	if err != nil {
-		output.ErrCode = common.CLIENT_REQUEST_PARAMS_ERROR
-		output.ErrMsg = err.Error()
-		o, _ := proto.Marshal(output)
-		return coma.PacketToPeer(conn, o)
+		return th.handleError(conn, output, common.CLIENT_REQUEST_PARAMS_ERROR, err.Error())
 	}
 
 	db := base.Database()
 	msgDao := dao.MessageDao{DB: db}
 	res, err := msgDao.GetAllRecvByLastSeqId(input.Username, input.LastSeqId)
 	if err != nil {
-		output.ErrCode = common.INTERNEL_UNKNOWN_ERROR
-		output.ErrMsg = err.Error()
-		o, _ := proto.Marshal(output)
-		return coma.PacketToPeer(conn, o)
+		return th.handleError(conn, output, common.INTERNEL_UNKNOWN_ERROR, err.Error())
 	}
 
 	var resp pb.SyncResp
@@ -203,4 +198,11 @@ func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {
 
 func (th *TCPHandler) messageAck(conn *coma.Conn, data []byte) error {
 	return nil
+}
+
+func (th *TCPHandler) handleError(conn *coma.Conn, resp *pb.ConnOutput, errCode int32, errMsg string) error {
+	resp.ErrCode = errCode
+	resp.ErrMsg = errMsg
+	o, _ := proto.Marshal(resp)
+	return coma.PacketToPeer(conn, o)
 }
