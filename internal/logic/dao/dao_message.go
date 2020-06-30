@@ -19,6 +19,12 @@ type Message struct {
 	UpdatedAt    *time.Time `gorm:"update_time,omitempty"`
 }
 
+func (m *Message) ContentSize() int {
+	// Content
+	size := len(m.Content)
+	return size
+}
+
 type MessageDao struct {
 	DB *gorm.DB
 }

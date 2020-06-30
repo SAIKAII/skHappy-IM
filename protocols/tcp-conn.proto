@@ -45,7 +45,6 @@ message SyncResp {
 
 message MessageOutput {
     MessageItem item    = 1;
-    uint64      seq_id  = 2;
 }
 
 /**************************************************************************/
@@ -76,6 +75,7 @@ message MessageItem {
     ReceiverType    receiver_type   = 4;
     MessageBody     msg_body        = 5;
     int64           send_time       = 6;
+    uint64          seq_id          = 7;
 }
 
 enum SenderType {

@@ -142,6 +142,7 @@ func (cf *CliInterfaceServer) ListFriends(ctx context.Context, req *pb.ListUsers
 
 func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessageReq) (*pb.SendMessageResp, error) {
 	seqId, err := services.IMessageService.SaveMessage(req)
+	req.Item.SeqId = seqId
 	if err != nil {
 		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
 			return nil, status.Errorf(codes.NotFound, err.Error())
@@ -158,8 +159,7 @@ func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessa
 	}
 
 	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
-		Item:  req.Item,
-		SeqId: seqId,
+		Item: req.Item,
 	})
 	if err != nil {
 		return nil, status.Errorf(status.Code(err), err.Error())

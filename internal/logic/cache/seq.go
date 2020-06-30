@@ -32,3 +32,14 @@ func Incr(name string) (uint64, error) {
 
 	return seqId, nil
 }
+
+func Decr(name string) (uint64, error) {
+	rdConn := base.RedisConn()
+	defer rdConn.Close()
+	seqId, err := redis.Uint64(rdConn.Do("DECR", name))
+	if err != nil {
+		return 0, err
+	}
+
+	return seqId, nil
+}

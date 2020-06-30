@@ -8,6 +8,7 @@ import (
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
 	"github.com/golang/protobuf/proto"
+	"github.com/jinzhu/gorm"
 	"time"
 )
 
@@ -22,8 +23,7 @@ func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
 	}
 
 	output := &pb.MessageOutput{
-		Item:  req.Item,
-		SeqId: req.SeqId,
+		Item: req.Item,
 	}
 	b, _ := proto.Marshal(output)
 	dmReq := &pb.ConnOutput{
@@ -75,15 +75,27 @@ func (ms *messageService) SaveMessage(req *pb.SendMessageReq) (uint64, error) {
 		SendTime:     &tm,
 	}
 
-	messageDao := dao.MessageDao{DB: db}
-	// TODO 两个数据库操作做成事务，失败的话要DECR seqId
-	err = messageDao.InsertOne(msg)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		messageDao := dao.MessageDao{DB: tx}
+		err = messageDao.InsertOne(msg)
+		if err != nil {
+			return err
+		}
+		recvDao := dao.MsgRecvDao{DB: tx}
+		err = recvDao.UpdateLastSeqId(req.Item.ReceiverName, seqId)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
-
-	}
-	err = msgRecvDao.UpdateLastSeqId(req.Item.ReceiverName, seqId)
-	if err != nil {
-
+		// 事务失败，seqId恢复原来的值
+		seqId, e := cache.Decr(key)
+		if e != nil {
+			return 0, err
+		}
+		msgRecvDao.UpdateLastSeqId(req.Item.ReceiverName, seqId)
+		return 0, err
 	}
 
 	return seqId, nil

@@ -4,7 +4,6 @@ package pb;
 
 message DeliverMessageReq {
     MessageItem item    = 1;
-    uint64      seq_id  = 2;
 }
 
 message DeliverMessageResp {

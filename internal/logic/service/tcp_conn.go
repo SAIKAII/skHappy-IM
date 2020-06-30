@@ -12,7 +12,7 @@ import (
 	"github.com/SAIKAII/skHappy-IM/services/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/gomodule/redigo/redis"
-	"log"
+	"github.com/sirupsen/logrus"
 )
 
 type ConnData struct {
@@ -55,7 +55,7 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 	}
 	if err != nil {
 		// TODO
-		log.Println(err)
+		logrus.Println(err)
 	}
 }
 
@@ -152,7 +152,7 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 
 	var resp pb.SyncResp
 	resp.Msg = make([]*pb.MessageItem, 0, len(res))
-	resp.HasMore = false
+	totalLen := 0
 	for _, v := range res {
 		mb := &pb.MessageBody{
 			Type: pb.MessageType(v.Type),
@@ -171,9 +171,28 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 			ReceiverType: pb.ReceiverType(v.ReceiverType),
 			MsgBody:      mb,
 			SendTime:     v.SendTime.Unix(),
+			SeqId:        v.SeqId,
 		}
+		// 如果数据大于缓冲区大小，则分多次发送
+		// 512 - 2(headerLen) = 510
+		// 510-510/10=459 这里拍脑袋决定的计算方式
+		// 原因：序列化后的数据大于原数据
+		if totalLen+th.itemSize(item)+v.ContentSize() > 459 {
+			resp.HasMore = true
+			d, _ := proto.Marshal(&resp)
+			output.Data = d
+			o, _ := proto.Marshal(output)
+			err := coma.PacketToPeer(conn, o)
+			if err != nil {
+				return err
+			}
+			totalLen = 0
+			resp.Msg = resp.Msg[:0]
+		}
+		totalLen += th.itemSize(item) + v.ContentSize()
 		resp.Msg = append(resp.Msg, item)
 	}
+	resp.HasMore = false
 	d, _ := proto.Marshal(&resp)
 	output.Data = d
 	o, _ := proto.Marshal(output)
@@ -214,4 +233,9 @@ func (th *TCPHandler) handleError(conn *coma.Conn, resp *pb.ConnOutput, errCode 
 	resp.ErrMsg = errMsg
 	o, _ := proto.Marshal(resp)
 	return coma.PacketToPeer(conn, o)
+}
+
+func (th TCPHandler) itemSize(item *pb.MessageItem) int {
+	// SenderName + SenderType + ReceiverName + ReceiverType + SendTime.Unix() + Type + SeqId
+	return len(item.SenderName) + 4 + len(item.ReceiverName) + 4 + 8 + 4 + 8
 }
