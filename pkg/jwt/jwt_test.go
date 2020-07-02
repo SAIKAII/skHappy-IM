@@ -17,8 +17,8 @@ func Test(t *testing.T) {
 		fmt.Println(jwtString)
 
 		res, err := VerifyJWT(jwtString)
-		ShouldBeNil(err)
-		ShouldNotBeNil(res)
+		So(err, ShouldBeNil)
+		So(res, ShouldNotBeNil)
 		fmt.Println(res)
 	})
 }

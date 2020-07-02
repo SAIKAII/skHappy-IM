@@ -1,21 +1,13 @@
 package services
 
 import (
+	"context"
 	"github.com/SAIKAII/skHappy-IM/pkg/util"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	jsoniter "github.com/json-iterator/go"
 )
 
 type MessageType int8
-
-const (
-	MESSAGE_TYPE_SINGLE     MessageType = iota // 单对单消息
-	MESSAGE_TYPE_GROUP                         // 群聊消息
-	MESSAGE_TYPE_HEART_BEAT                    // 心跳
-
-)
-
-const REDIS_MESSAGE_ID string = "msgIdMap" // redis中保存seqId的map名
 
 const (
 	MESSAGE_NOT_DELIVERED = iota // 消息未送达
@@ -25,16 +17,11 @@ const (
 var IMessageService MessageService
 
 type MessageService interface {
-	SendToOne(*pb.DeliverMessageReq) error
-	//SendToGroup(MessageTransferDTO) error
-	SaveMessage(*pb.SendMessageReq) (uint64, error)
-}
-
-type MessageTransferDTO struct {
-	MsgFrom string
-	MsgTo   string
-	MsgType MessageType
-	Content []byte
+	Send(context.Context, *pb.SendMessageReq) error
+	SendToOne(context.Context, *pb.SendMessageReq) error
+	SendToGroup(context.Context, *pb.SendMessageReq) error
+	SendToUser(context.Context, *pb.DeliverMessageReq) error
+	SaveMessage(context.Context, *pb.SendMessageReq) (uint64, error)
 }
 
 func PBToContent(msgBody *pb.MessageBody) (int8, string) {

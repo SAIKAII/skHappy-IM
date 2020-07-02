@@ -53,7 +53,7 @@ func (r *RelationShipDao) GetAll(username string) ([]*Relationship, error) {
 
 // Delete 删除两人关系
 func (r *RelationShipDao) Delete(userA, userB string) error {
-	if err := r.DB.Table("relationships").Where("user_a = ? and user_b = ?", userA, userB).Update("is_deleted", 1).Error; err != nil {
+	if err := r.DB.Where("user_a = ? and user_b = ?", userA, userB).Update("is_deleted", 1).Error; err != nil {
 		return err
 	}
 

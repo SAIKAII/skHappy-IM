@@ -2,12 +2,10 @@ package apis
 
 import (
 	"context"
-	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
 	"github.com/SAIKAII/skHappy-IM/pkg/jwt"
 	"github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
-	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
@@ -78,7 +76,7 @@ func cliInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServer
 }
 
 func (cf *CliInterfaceServer) Register(ctx context.Context, req *pb.RegisterReq) (*pb.RegisterResp, error) {
-	services.IAccountService.CreateAccount(services.AccountCreatedDTO{
+	err := services.IAccountService.CreateAccount(services.AccountCreatedDTO{
 		Username: req.User.Username,
 		Nickname: req.User.Nickname,
 		Password: req.User.Password,
@@ -87,6 +85,9 @@ func (cf *CliInterfaceServer) Register(ctx context.Context, req *pb.RegisterReq)
 		Birthday: time.Unix(req.User.Birthday, 0),
 		PhoneNum: req.User.PhoneNum,
 	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	return &pb.RegisterResp{}, nil
 }
 
@@ -141,28 +142,12 @@ func (cf *CliInterfaceServer) ListFriends(ctx context.Context, req *pb.ListUsers
 }
 
 func (cf *CliInterfaceServer) SendMessage(ctx context.Context, req *pb.SendMessageReq) (*pb.SendMessageResp, error) {
-	seqId, err := services.IMessageService.SaveMessage(req)
-	req.Item.SeqId = seqId
+	err := services.IMessageService.Send(ctx, req)
 	if err != nil {
 		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
-			return nil, status.Errorf(codes.NotFound, err.Error())
+			return nil, status.Errorf(codes.FailedPrecondition, "用户不在该群组内")
 		}
 		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-	rpcCli := base.NewRPCCli()
-	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
-	if err != nil {
-		if err == redis.ErrNil {
-			return &pb.SendMessageResp{}, nil
-		}
-		return nil, status.Errorf(codes.Internal, err.Error())
-	}
-
-	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
-		Item: req.Item,
-	})
-	if err != nil {
-		return nil, status.Errorf(status.Code(err), err.Error())
 	}
 
 	return &pb.SendMessageResp{}, nil
@@ -211,4 +196,40 @@ func (cf *CliInterfaceServer) ChangePassword(ctx context.Context, req *pb.Change
 	}
 
 	return &pb.ChangePasswordResp{}, nil
+}
+
+func (cf *CliInterfaceServer) CreateGroup(ctx context.Context, req *pb.CreateGroupReq) (*pb.CreateGroupResp, error) {
+	groupId, err := services.IGroupService.CreateGroup(req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.CreateGroupResp{GroupId: groupId}, nil
+}
+
+func (cf *CliInterfaceServer) DeleteGroup(ctx context.Context, req *pb.DisbandGroupReq) (*pb.DisbandGroupResp, error) {
+	err := services.IGroupService.DeleteGroup(req.GroupId)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.DisbandGroupResp{}, nil
+}
+
+func (cf *CliInterfaceServer) AddGroupMember(ctx context.Context, req *pb.AddGroupMemberReq) (*pb.AddGroupMemberResp, error) {
+	err := services.IGroupService.AddGroupMember(req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.AddGroupMemberResp{}, nil
+}
+
+func (cf *CliInterfaceServer) DelGroupMember(ctx context.Context, req *pb.DelGroupMemberReq) (*pb.DelGroupMemberResp, error) {
+	err := services.IGroupService.DelGroupMember(req)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.DelGroupMemberResp{}, nil
 }

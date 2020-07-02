@@ -18,8 +18,8 @@ func TestAccountDao_GetOne(t *testing.T) {
 		fmt.Println(u1)
 
 		u2, err := dao.GetOne("ss")
-		ShouldNotBeNil(err)
-		ShouldBeNil(u2)
+		So(err, ShouldNotBeNil)
+		So(u2, ShouldBeNil)
 	})
 }
 
@@ -35,6 +35,6 @@ func TestAccountDao_Insert(t *testing.T) {
 			Sex:      4,
 		}
 		err := dao.Insert(u)
-		ShouldBeNil(err)
+		So(err, ShouldBeNil)
 	})
 }

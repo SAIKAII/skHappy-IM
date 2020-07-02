@@ -55,7 +55,7 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 	}
 	if err != nil {
 		// TODO
-		logrus.Println(err)
+		logrus.Error(err)
 	}
 }
 

@@ -19,6 +19,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer conn.Close()
 
 	c := make(chan interface{})
 	defer close(c)
@@ -47,7 +48,7 @@ func main() {
 
 	// 拉取离线消息
 	sync := &pb.SyncReq{
-		Username:  "qffqwrtb231",
+		Username:  "ituen,vlos1",
 		LastSeqId: 70,
 	}
 	err = long_link.Sync(cdc, sync)

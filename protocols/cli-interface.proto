@@ -77,6 +77,46 @@ message ChangePasswordReq {
 message ChangePasswordResp {
 }
 
+message Group {
+    uint64 group_id     = 1;
+    string group_name   = 2;
+    string create_user  = 3;
+    string owner        = 4;
+    string announcement = 5;
+    int32  user_num     = 6;
+}
+
+message CreateGroupReq {
+    Group group = 1;
+}
+
+message CreateGroupResp {
+    uint64 group_id = 1;
+}
+
+message DisbandGroupReq {
+    uint64 group_id = 1;
+}
+
+message DisbandGroupResp {
+}
+
+message AddGroupMemberReq {
+    uint64 group_id = 1;
+    string username = 2;
+}
+
+message AddGroupMemberResp {
+}
+
+message DelGroupMemberReq {
+    uint64 group_id = 1;
+    string username = 2;
+}
+
+message DelGroupMemberResp{
+}
+
 service CliInterfaceService {
     // Register 用户注册
     rpc Register(RegisterReq) returns(RegisterResp);
@@ -94,4 +134,12 @@ service CliInterfaceService {
     rpc UpdateProfile(UpdateProfileReq) returns(UpdateProfileResp);
     // ChangePassword 更换密码
     rpc ChangePassword(ChangePasswordReq) returns(ChangePasswordResp);
+    // 创建群组
+    rpc CreateGroup(CreateGroupReq) returns(CreateGroupResp);
+    // 解散群组
+    rpc DeleteGroup(DisbandGroupReq) returns(DisbandGroupResp);
+    // 用户加入群组
+    rpc AddGroupMember(AddGroupMemberReq) returns(AddGroupMemberResp);
+    // 用户退出群组
+    rpc DelGroupMember(DelGroupMemberReq) returns(DelGroupMemberResp);
 }

@@ -15,8 +15,8 @@ func TestMessageDao_GetAllRecvByLastSeqId(t *testing.T) {
 		var lastSeqId uint64
 		lastSeqId = 69
 		res, err := messageDao.GetAllRecvByLastSeqId(username, lastSeqId)
-		ShouldBeNil(err)
-		ShouldNotBeNil(res)
+		So(err, ShouldBeNil)
+		So(res, ShouldNotBeNil)
 		for _, v := range res {
 			fmt.Println("[From]", v.Sender, "[To]", v.Receiver, "[Time]", v.SendTime, "[SeqId]", v.SeqId)
 			fmt.Println("[Content]", v.Content)

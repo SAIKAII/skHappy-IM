@@ -7,11 +7,16 @@ import (
 
 const USER_SEQ = "user_seq:"
 
-func UserKey(username string) string {
+var SeqCache = &seqCache{}
+
+type seqCache struct {
+}
+
+func (s *seqCache) Key(username string) string {
 	return USER_SEQ + username
 }
 
-func UpdateUserSeq(name string, seqId uint64) error {
+func (s *seqCache) UpdateUserSeq(name string, seqId uint64) error {
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	_, err := rdConn.Do("SET", name, seqId)
@@ -22,7 +27,7 @@ func UpdateUserSeq(name string, seqId uint64) error {
 	return nil
 }
 
-func Incr(name string) (uint64, error) {
+func (s *seqCache) Incr(name string) (uint64, error) {
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	seqId, err := redis.Uint64(rdConn.Do("INCR", name))
@@ -33,7 +38,7 @@ func Incr(name string) (uint64, error) {
 	return seqId, nil
 }
 
-func Decr(name string) (uint64, error) {
+func (s *seqCache) Decr(name string) (uint64, error) {
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	seqId, err := redis.Uint64(rdConn.Do("DECR", name))

@@ -1,21 +1,80 @@
 package service
 
 import (
+	"context"
+	"errors"
 	coma "github.com/SAIKAII/go-conn-manager"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/cache"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
+	"github.com/SAIKAII/skHappy-IM/services/common"
 	"github.com/golang/protobuf/proto"
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
+	"strconv"
 	"time"
 )
 
 type messageService struct {
 }
 
-func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
+func (ms *messageService) Send(ctx context.Context, req *pb.SendMessageReq) error {
+	var err error
+	switch req.Item.ReceiverType {
+	case pb.ReceiverType_RT_USER:
+		err = ms.SendToOne(ctx, req)
+	case pb.ReceiverType_RT_GROUP:
+		err = ms.SendToGroup(ctx, req)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq) error {
+	seqId, err := services.IMessageService.SaveMessage(ctx, req)
+	req.Item.SeqId = seqId
+	if err != nil {
+		return err
+	}
+
+	rpcCli := base.NewRPCCli()
+	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
+	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
+		Item: req.Item,
+	})
+
+	if err != nil && err != redis.ErrNil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageReq) error {
+	// 先判断该用户是否群员
+	err := services.IGroupService.IsMember(req.Item.GroupId, req.Item.SenderName)
+	if err != nil {
+		return err
+	}
+
+	users, err := services.IGroupService.ListGroupMember(req.Item.GroupId)
+	if err != nil {
+		return err
+	}
+
+	for _, u := range users {
+		req.Item.ReceiverName = u.Username
+		ms.SendToOne(ctx, req)
+	}
+}
+
+func (ms *messageService) SendToUser(ctx context.Context, req *pb.DeliverMessageReq) error {
 	conn := base.ConnectionManager().GetConn(req.Item.ReceiverName)
 	if conn == nil {
 		// 对方不在线，保存消息到数据库后直接返回
@@ -41,11 +100,11 @@ func (ms *messageService) SendToOne(req *pb.DeliverMessageReq) error {
 	return nil
 }
 
-func (ms *messageService) SaveMessage(req *pb.SendMessageReq) (uint64, error) {
+func (ms *messageService) SaveMessage(ctx context.Context, req *pb.SendMessageReq) (uint64, error) {
 	typ, content := services.PBToContent(req.Item.MsgBody)
 	tm := time.Unix(req.Item.SendTime, 0)
-	key := cache.UserKey(req.Item.ReceiverName)
-	seqId, err := cache.Incr(key)
+	key := cache.SeqCache.Key(req.Item.ReceiverName)
+	seqId, err := cache.SeqCache.Incr(key)
 	if err != nil {
 		return 0, err
 	}
@@ -61,7 +120,7 @@ func (ms *messageService) SaveMessage(req *pb.SendMessageReq) (uint64, error) {
 
 		seqId = msgRecv.LastSeqId
 		seqId++
-		cache.UpdateUserSeq(req.Item.ReceiverName, seqId)
+		cache.SeqCache.UpdateUserSeq(req.Item.ReceiverName, seqId)
 	}
 
 	msg := &dao.Message{
@@ -90,7 +149,7 @@ func (ms *messageService) SaveMessage(req *pb.SendMessageReq) (uint64, error) {
 	})
 	if err != nil {
 		// 事务失败，seqId恢复原来的值
-		seqId, e := cache.Decr(key)
+		seqId, e := cache.SeqCache.Decr(key)
 		if e != nil {
 			return 0, err
 		}
