@@ -13,10 +13,9 @@ import (
 var cc pb.CliInterfaceServiceClient
 
 func main() {
-	selfName := util.RandString(32)
-	selfNickname := util.RandString(32)
-	friendName := "ituen,vlos1"
-	//friendNickname := "Red"
+	username := util.RandString(32)
+	nickname := util.RandString(32)
+
 	tk := &jwt.JWTSt{}
 	cli, err := grpc.Dial("127.0.0.1:8088", grpc.WithInsecure(), grpc.WithPerRPCCredentials(tk))
 	if err != nil {
@@ -26,30 +25,24 @@ func main() {
 	cc = pb.NewCliInterfaceServiceClient(cli)
 
 	// 注册
-	register(selfName, selfNickname)
+	err = register(username, nickname)
+	if err != nil {
+		panic(err)
+	}
 
 	// 登录 获取JWT
 	c := make(chan interface{}, 1)
 	defer close(c)
-	// tcp测试
-	go tcpConnTest(selfName, c)
+
+	go tcpConnTest(username, c)
 	jwtString := <-c
 	tk.JWTString = jwtString.(string)
 
-	// 添加好友
-	addFriend(selfName, friendName)
-	// 获取好友信息
-	getFriend(friendName)
-	// 获取自己的所有好友
-	listFriends(selfName)
-	// 更新个人信息
-	updateProfile(selfName, "Yoy")
-	// 修改密码
-	changePassword(selfName, "987654")
-	// 删除好友关系
-	//deleteFriend(selfName, friendName)
-	// 发送消息
-	sendMessage(selfName, friendName)
+	// 加入群组
+	err = joinGroup(username, 12)
+	if err != nil {
+		panic(err)
+	}
 
 	chSig := make(chan os.Signal)
 	signal.Notify(chSig, os.Interrupt, os.Kill)

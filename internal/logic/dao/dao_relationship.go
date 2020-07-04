@@ -60,7 +60,7 @@ func (r *RelationShipDao) Delete(userA, userB string) error {
 	return nil
 }
 
-// GetOne 获取指定两人的关系记录，若没有指定记录不会引发错误，但是返回的对象为nil
+// GetOne 获取指定两人的关系记录
 func (r *RelationShipDao) GetOne(userA, userB string) (*Relationship, error) {
 	rel := &Relationship{}
 	if err := r.DB.First(rel, "user_a = ? and user_b = ?", userA, userB).Error; err != nil {

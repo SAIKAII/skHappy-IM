@@ -46,6 +46,10 @@ func (g *groupService) CreateGroup(req *pb.CreateGroupReq) (uint64, error) {
 			return err
 		}
 
+		err = groupDao.UpdateNum(groupId, 1)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
@@ -213,13 +217,16 @@ func (g *groupService) ListGroupMember(groupId uint64) ([]*dao.GroupUser, error)
 	return users, nil
 }
 
-func (g *groupService) IsMember(groupId uint64, username string) error {
+func (g *groupService) IsMember(groupId uint64, username string) (bool, error) {
 	db := base.Database()
 	groupUserDao := &dao.GroupUserDao{DB: db}
-	_, err := groupUserDao.GetOne(groupId, username)
+	groupUser, err := groupUserDao.GetOne(groupId, username)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	return nil
+	if groupUser.IsDeleted == 1 {
+		return false, nil
+	}
+	return true, nil
 }

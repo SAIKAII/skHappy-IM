@@ -57,7 +57,7 @@ func connInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServe
 }
 
 func (c *ConnServer) DeliverMessage(ctx context.Context, req *pb.DeliverMessageReq) (*pb.DeliverMessageResp, error) {
-	err := services.IMessageService.SendToOne(req)
+	err := services.IMessageService.SendToUser(ctx, req)
 	if err != nil {
 		if err == dao.DAO_ERROR_RECORD_NOT_FOUND {
 			return nil, status.Errorf(codes.NotFound, err.Error())

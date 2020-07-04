@@ -9,11 +9,10 @@ import (
 	"github.com/SAIKAII/skHappy-IM/internal/logic/dao"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/services"
-	"github.com/SAIKAII/skHappy-IM/services/common"
+	"github.com/go-sql-driver/mysql"
 	"github.com/golang/protobuf/proto"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
-	"strconv"
 	"time"
 )
 
@@ -37,6 +36,55 @@ func (ms *messageService) Send(ctx context.Context, req *pb.SendMessageReq) erro
 }
 
 func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq) error {
+	// 先判断两人是否好友关系
+	isFriend, err := services.IRelationshipService.IsFriend(req.Item.SenderName, req.Item.ReceiverName)
+	if err != nil {
+		return err
+	}
+
+	if !isFriend {
+		return errors.New("两人不是好友关系")
+	}
+
+	err = ms.sendToPeer(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageReq) error {
+	// 先判断该用户是否群员
+	isMember, err := services.IGroupService.IsMember(req.Item.GroupId, req.Item.SenderName)
+	if err != nil {
+		return err
+	}
+
+	if !isMember {
+		return errors.New("该用户不在群组内")
+	}
+
+	users, err := services.IGroupService.ListGroupMember(req.Item.GroupId)
+	if err != nil {
+		return err
+	}
+
+	for _, u := range users {
+		if req.Item.SenderName == u.Username {
+			continue
+		}
+		req.Item.ReceiverName = u.Username
+		err := ms.sendToPeer(ctx, req)
+		if _, ok := err.(*mysql.MySQLError); ok {
+			// TODO 数据库错误，也就是没有正确保存，需要处理
+		}
+	}
+
+	return nil
+}
+
+func (ms *messageService) sendToPeer(ctx context.Context, req *pb.SendMessageReq) error {
 	seqId, err := services.IMessageService.SaveMessage(ctx, req)
 	req.Item.SeqId = seqId
 	if err != nil {
@@ -45,6 +93,9 @@ func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq)
 
 	rpcCli := base.NewRPCCli()
 	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
+	if err != nil {
+		return err
+	}
 	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
 		Item: req.Item,
 	})
@@ -54,24 +105,6 @@ func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq)
 	}
 
 	return nil
-}
-
-func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageReq) error {
-	// 先判断该用户是否群员
-	err := services.IGroupService.IsMember(req.Item.GroupId, req.Item.SenderName)
-	if err != nil {
-		return err
-	}
-
-	users, err := services.IGroupService.ListGroupMember(req.Item.GroupId)
-	if err != nil {
-		return err
-	}
-
-	for _, u := range users {
-		req.Item.ReceiverName = u.Username
-		ms.SendToOne(ctx, req)
-	}
 }
 
 func (ms *messageService) SendToUser(ctx context.Context, req *pb.DeliverMessageReq) error {

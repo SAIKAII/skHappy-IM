@@ -24,6 +24,7 @@ func main() {
 	c := make(chan interface{})
 	defer close(c)
 	cdc := codec.NewCodec(conn)
+	defer cdc.CloseConnection()
 	go long_link.ReadResp(cdc, getMessage, c)
 
 	// 登录
@@ -59,7 +60,6 @@ func main() {
 	signal.Notify(chSig, os.Interrupt, os.Kill)
 	select {
 	case <-chSig:
-		cdc.CloseConnection()
 		fmt.Println("Stop")
 	}
 }

@@ -79,6 +79,25 @@ func (r *relationshipService) GetAllFriends(username string) ([]string, error) {
 	return res, nil
 }
 
+func (r *relationshipService) IsFriend(userA, userB string) (bool, error) {
+	if !r.Greater(userA, userB) {
+		userA, userB = userB, userA
+	}
+
+	db := base.Database()
+	relDao := dao.RelationShipDao{DB: db}
+	rel, err := relDao.GetOne(userA, userB)
+	if err != nil {
+		return false, err
+	}
+
+	if rel.IsDeleted == 1 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (r *relationshipService) get(userA, userB string) (*dao.Relationship, error) {
 	db := base.Database()
 	relDao := dao.RelationShipDao{DB: db}
