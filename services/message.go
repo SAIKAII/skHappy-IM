@@ -9,11 +9,6 @@ import (
 
 type MessageType int8
 
-const (
-	MESSAGE_NOT_DELIVERED = iota // 消息未送达
-	MESSAGE_DELIVERED            // 消息送达
-)
-
 var IMessageService MessageService
 
 type MessageService interface {
@@ -21,7 +16,6 @@ type MessageService interface {
 	SendToOne(context.Context, *pb.SendMessageReq) error
 	SendToGroup(context.Context, *pb.SendMessageReq) error
 	SendToUser(context.Context, *pb.DeliverMessageReq) error
-	SaveMessage(context.Context, *pb.SendMessageReq) (uint64, error)
 }
 
 func PBToContent(msgBody *pb.MessageBody) (int8, string) {

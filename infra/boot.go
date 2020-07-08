@@ -30,7 +30,7 @@ func (b *BootApplication) init() {
 	logrus.Info("Initializing starters...")
 	for _, v := range GetStarters() {
 		typ := reflect.TypeOf(v)
-		logrus.Debug("Initializing type: %s", typ.String())
+		logrus.Info("Initializing type: %s", typ.String())
 		v.Init(b.starterCtx)
 	}
 }
@@ -40,7 +40,7 @@ func (b *BootApplication) setup() {
 	logrus.Info("Setup starters...")
 	for _, v := range GetStarters() {
 		typ := reflect.TypeOf(v)
-		logrus.Debug("Setup: ", typ.String())
+		logrus.Info("Setup: ", typ.String())
 		v.Setup(b.starterCtx)
 	}
 }
@@ -50,7 +50,7 @@ func (b *BootApplication) start() {
 	logrus.Info("Starting starters...")
 	for i, v := range GetStarters() {
 		typ := reflect.TypeOf(v)
-		logrus.Debug("Starting: ", typ.String())
+		logrus.Info("Starting: ", typ.String())
 		if v.StartBlocking() {
 			if i+1 == len(GetStarters()) {
 				v.Start(b.starterCtx)
@@ -68,7 +68,7 @@ func (b *BootApplication) Stop() {
 	logrus.Info("Stopping starters...")
 	for _, v := range GetStarters() {
 		typ := reflect.TypeOf(v)
-		logrus.Debug("Stopping: ", typ.String())
+		logrus.Info("Stopping: ", typ.String())
 		v.Stop(b.starterCtx)
 	}
 }

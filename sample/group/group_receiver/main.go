@@ -39,7 +39,7 @@ func main() {
 	tk.JWTString = jwtString.(string)
 
 	// 加入群组
-	err = joinGroup(username, 12)
+	err = joinGroup(username, 13)
 	if err != nil {
 		panic(err)
 	}

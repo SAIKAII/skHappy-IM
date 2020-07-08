@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/sample/long_link"
 	codec "github.com/SAIKAII/skHappy-IM/sample/util"
 	"github.com/golang/protobuf/proto"
+	"github.com/sirupsen/logrus"
 	"net"
 	"time"
 )
@@ -42,7 +42,7 @@ func getMessage(data []byte) error {
 		return err
 	}
 
-	fmt.Println("[From]", content.Item.SenderName, "[To]", content.Item.ReceiverName,
+	logrus.Info(time.Now(), "[From]", content.Item.SenderName, "[To]", content.Item.ReceiverName,
 		"[Type]", content.Item.MsgBody.Type, "[content]", content.Item.MsgBody.Content.GetText().Text)
 
 	//retMessage(content)

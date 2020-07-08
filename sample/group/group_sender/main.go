@@ -4,9 +4,11 @@ import (
 	"fmt"
 	pb "github.com/SAIKAII/skHappy-IM/protocols"
 	"github.com/SAIKAII/skHappy-IM/sample/jwt"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"os"
 	"os/signal"
+	"time"
 )
 
 var cc pb.CliInterfaceServiceClient
@@ -23,7 +25,7 @@ func main() {
 	defer cli.Close()
 	cc = pb.NewCliInterfaceServiceClient(cli)
 
-	// 注册
+	//注册
 	//err = register(username, nickname)
 	//if err != nil {
 	//	panic(err)
@@ -33,19 +35,19 @@ func main() {
 	c := make(chan interface{}, 1)
 	defer close(c)
 
-	go tcpConnTest("XzhKSrcVoauCNBkkbVuQFnhaLVQxLvsW", c)
+	go tcpConnTest("cdiwuOGvAPkMAPhRIzxJIWGpnefBXjYl", c)
 	jwtString := <-c
 	tk.JWTString = jwtString.(string)
 
 	// 创建群组
-	//_, err = createGroup(username)
+	//_, err = createGroup("TestGroup")
 	//if err != nil {
 	//	panic(err)
 	//}
 
 	// 发送群消息
 	for i := 0; i < 5; i++ {
-		err = sendGroupMessage("XzhKSrcVoauCNBkkbVuQFnhaLVQxLvsW", 12)
+		err = sendGroupMessage("cdiwuOGvAPkMAPhRIzxJIWGpnefBXjYl", 13)
 		if err != nil {
 			panic(err)
 		}
