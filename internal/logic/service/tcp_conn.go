@@ -79,57 +79,79 @@ func (th *TCPHandler) OnError(conn *coma.Conn) {
 }
 
 func (th *TCPHandler) signIn(conn *coma.Conn, data []byte) error {
-	var input pb.SignInReq
+	input := &pb.SignInReq{}
 	resp := &pb.ConnOutput{
 		PackageType: pb.PackageType_PT_SIGN_IN,
 		Data:        nil,
 	}
-	err := proto.Unmarshal(data, &input)
+	err := proto.Unmarshal(data, input)
 	if err != nil {
 		// 对请求的数据unmarshal失败
 		return th.handleError(conn, resp, common.CLIENT_REQUEST_PARAMS_ERROR, err.Error())
 	}
 
-	// 验证用户登录是否通过
-	err = services.IAuthService.SignInAuth(input.Username, input.Password)
-	if err != nil {
-		// 验证没通过
-		if err == services.AUTH_FAILURE {
-			return th.handleError(conn, resp, common.COMMON_PWD_NOT_MATCH_ERROR, err.Error())
-		} else if err == services.USER_NOT_FOUND {
-			return th.handleError(conn, resp, common.COMMON_USER_NOT_FOUND_ERROR, err.Error())
-		} else {
-			return th.handleError(conn, resp, common.COMMON_UNKNOWN_ERROR, err.Error())
+	signInResp := &pb.SignInResp{}
+	var username string
+	if input.Token != "" {
+		// 用户传token，直接验证token是否合法
+		m, err := jwt.VerifyJWT(input.Token)
+		if err != nil {
+			return th.handleError(conn, resp, common.COMMON_JWT_VERIFY_ERROR, err.Error())
 		}
+		username = m["username"].(string)
+	} else {
+		jwtString, err := th.signInAuth(input)
+		if err != nil {
+			// 验证没通过
+			if err == services.AUTH_FAILURE {
+				return th.handleError(conn, resp, common.COMMON_PWD_NOT_MATCH_ERROR, err.Error())
+			} else if err == services.USER_NOT_FOUND {
+				return th.handleError(conn, resp, common.COMMON_USER_NOT_FOUND_ERROR, err.Error())
+			} else if err == jwt.TOKEN_GENERATE_ERROR {
+				return th.handleError(conn, resp, common.INTERNEL_GENERATE_JWT_ERROR, err.Error())
+			} else {
+				return th.handleError(conn, resp, common.COMMON_UNKNOWN_ERROR, err.Error())
+			}
+		}
+		signInResp.Jwt = jwtString
+		username = input.Username
 	}
-
-	// 生成JWT
-	meta := make(map[string]interface{})
-	meta["username"] = input.Username
-	jwtString, err := jwt.NewJWT(meta)
-	if err != nil {
-		return th.handleError(conn, resp, common.INTERNEL_GENERATE_JWT_ERROR, "JWT生成失败")
-	}
-
-	output := &pb.SignInResp{Jwt: jwtString}
 
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
-	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, input.Username, fmt.Sprintf("%s:%d", th.host, 8089)))
+	_, err = redis.Bool(rdConn.Do("HSET", base.USER_ADDR, username, fmt.Sprintf("%s:%d", th.host, 8089)))
 	if err != nil {
 		return th.handleError(conn, resp, common.INTERNEL_UNKNOWN_ERROR, "保存登录状态失败")
 	}
 
-	base.ConnectionManager().StoreConn(input.Username, conn)
+	base.ConnectionManager().StoreConn(username, conn)
 	// 保存一些与该连接有关的信息
-	cData := &ConnData{Username: input.Username}
+	cData := &ConnData{Username: username}
 	conn.SetData(cData)
 
-	b, _ := proto.Marshal(output)
+	b, _ := proto.Marshal(signInResp)
 	resp.Data = b
 	o, _ := proto.Marshal(resp)
 
 	return coma.PacketToPeer(conn, o)
+}
+
+func (th *TCPHandler) signInAuth(req *pb.SignInReq) (string, error) {
+	// 验证用户登录是否通过
+	err := services.IAuthService.SignInAuth(req.Username, req.Password)
+	if err != nil {
+		return "", err
+	}
+
+	// 生成JWT
+	meta := make(map[string]interface{})
+	meta["username"] = req.Username
+	jwtString, err := jwt.NewJWT(meta)
+	if err != nil {
+		return "", err
+	}
+
+	return jwtString, nil
 }
 
 func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {

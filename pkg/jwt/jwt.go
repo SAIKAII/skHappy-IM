@@ -13,6 +13,8 @@ var (
 	TOKEN_NOT_AVALIABLE_ERROR = errors.New("token不可用")
 	TOKEN_UNKNOWN_ERROR       = errors.New("token未知错误")
 	TOKEN_INVALID_ERROR       = errors.New("token非法")
+
+	TOKEN_GENERATE_ERROR = errors.New("JWT生成失败")
 )
 
 func NewJWT(meta map[string]interface{}) (string, error) {
@@ -21,7 +23,11 @@ func NewJWT(meta map[string]interface{}) (string, error) {
 		mapClaims[k] = v
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, mapClaims)
-	return token.SignedString(hmacSampleSecret)
+	jwtString, err := token.SignedString(hmacSampleSecret)
+	if err != nil {
+		return "", err
+	}
+	return jwtString, nil
 }
 
 // VerifyJWT 认证jwt并获取载荷

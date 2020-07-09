@@ -27,6 +27,7 @@ message ConnOutput {
 message SignInReq {
     string username = 1;
     string password = 2;
+    string token    = 3;
 }
 
 message SignInResp {
