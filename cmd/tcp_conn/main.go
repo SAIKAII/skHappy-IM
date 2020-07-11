@@ -8,6 +8,7 @@ import (
 	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/service"
 	_ "github.com/SAIKAII/skHappy-IM/internal/logic/service"
+	"github.com/spf13/viper"
 	"os"
 	"os/signal"
 	"time"
@@ -24,15 +25,30 @@ func init() {
 }
 
 func main() {
-	tcpAddr := "127.0.0.1"
+	viper.SetConfigName("config")
+	viper.AddConfigPath("cmd/config/")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Fatal error config file: %s\n", err))
+	}
+
 	// 注册RPC Server
-	go apis.StartConnRPCServer(fmt.Sprintf("%s:%d", tcpAddr, 8089))
+	go apis.StartConnRPCServer(
+		fmt.Sprintf("%s:%d",
+			viper.GetString("tcp-server.host"),
+			viper.GetInt("tcp-server.rpc-port")))
 
 	// 启动TCP监控
-	th := service.NewTCPHandler(tcpAddr)
+	th := service.NewTCPHandler(viper.GetString("tcp-server.host"))
 	epoll := coma.NewEpoll(10 * time.Second)
 	server := coma.NewServer(epoll)
-	go server.Start("127.0.0.1", 8090, 2, 512, 512, th)
+	go server.Start(
+		viper.GetString("tcp-server.host"),
+		viper.GetInt("tcp-server.long-conn-port"),
+		viper.GetInt("tcp-server.header-len"),
+		viper.GetInt("tcp-server.read-max-len"),
+		viper.GetInt("tcp-server.write-max-len"),
+		th)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, os.Kill)

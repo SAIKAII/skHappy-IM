@@ -1,0 +1,15 @@
+{
+  "cli-rpc-server": {
+    "host": "127.0.0.1",
+    "port": 8088
+  },
+  "tcp-server": {
+    "host": "127.0.0.1",
+    "rpc-port": 8089,
+    "long-conn-port": 8090,
+    "check-online": 10,
+    "header-len": 2,
+    "read-max-len": 512,
+    "write-max-len": 512
+  }
+}
