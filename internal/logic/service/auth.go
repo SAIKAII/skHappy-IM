@@ -16,11 +16,14 @@ func (a *authService) SignInAuth(username, password string) error {
 	accountDao := dao.UserDao{DB: db}
 	user, err := accountDao.GetOne(username)
 	if err != nil {
-		return errors.New("该用户未注册")
+		err := errors.New("该用户未注册")
+		base.Logger.Errorln(err)
+		return err
 	}
 
 	pwdEncrypted := encrypto.EnCryptoPassword(password, user.Salt)
 	if pwdEncrypted != user.Password {
+		base.Logger.Errorln(services.AUTH_FAILURE)
 		return services.AUTH_FAILURE
 	}
 

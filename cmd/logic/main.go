@@ -18,6 +18,7 @@ func init() {
 	infra.Register(&base.RedisStarter{})
 	infra.Register(&base.ConnStarter{})
 	infra.Register(&base.RPCCliStarter{})
+	infra.Register(&base.LoggerStarter{})
 
 	b.Start()
 }

@@ -29,6 +29,7 @@ func (g *groupService) CreateGroup(req *pb.CreateGroupReq) (uint64, error) {
 		groupDao := &dao.GroupDao{DB: tx}
 		groupId, err = groupDao.InsertOne(grp)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
@@ -43,6 +44,7 @@ func (g *groupService) CreateGroup(req *pb.CreateGroupReq) (uint64, error) {
 		}
 		err = groupUserDao.InsertOne(groupUser)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
@@ -53,6 +55,7 @@ func (g *groupService) CreateGroup(req *pb.CreateGroupReq) (uint64, error) {
 		return nil
 	})
 	if err != nil {
+		base.Logger.Errorln(err)
 		return 0, err
 	}
 
@@ -63,6 +66,7 @@ func (g *groupService) DeleteGroup(groupId uint64) error {
 	db := base.Database()
 	users, err := g.ListGroupMember(groupId)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -73,6 +77,7 @@ func (g *groupService) DeleteGroup(groupId uint64) error {
 			v.IsDeleted = 1
 			err = groupUserDao.UpdateOne(v)
 			if err != nil {
+				base.Logger.Errorln(err)
 				return err
 			}
 		}
@@ -80,6 +85,7 @@ func (g *groupService) DeleteGroup(groupId uint64) error {
 		groupDao := &dao.GroupDao{DB: tx}
 		err = groupDao.DeleteOne(groupId)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
@@ -87,12 +93,14 @@ func (g *groupService) DeleteGroup(groupId uint64) error {
 	})
 
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	key := cache.GroupUserCache.Key(groupId)
 	err = cache.GroupUserCache.Del(key)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -114,9 +122,11 @@ func (g *groupService) AddGroupMember(req *pb.AddGroupMemberReq) error {
 				groupUser.IsDeleted = 0
 				err = groupUserDao.UpdateOne(groupUser)
 				if err != nil {
+					base.Logger.Errorln(err)
 					return err
 				}
 			} else {
+				base.Logger.Errorln(err)
 				return err
 			}
 		}
@@ -124,11 +134,13 @@ func (g *groupService) AddGroupMember(req *pb.AddGroupMemberReq) error {
 		groupDao := &dao.GroupDao{DB: tx}
 		num, err := groupDao.UserNum(req.GroupId)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 		num++
 		err = groupDao.UpdateNum(req.GroupId, num)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
@@ -136,12 +148,14 @@ func (g *groupService) AddGroupMember(req *pb.AddGroupMemberReq) error {
 	})
 
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	key := cache.GroupUserCache.Key(req.GroupId)
 	err = cache.GroupUserCache.Del(key)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -159,12 +173,14 @@ func (g *groupService) DelGroupMember(req *pb.DelGroupMemberReq) error {
 		}
 		err := groupUserDao.UpdateOne(groupUser)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
 		groupDao := &dao.GroupDao{DB: tx}
 		num, err := groupDao.UserNum(req.GroupId)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
@@ -173,11 +189,13 @@ func (g *groupService) DelGroupMember(req *pb.DelGroupMemberReq) error {
 			// 如果群组已经没人
 			err = groupDao.DeleteOne(req.GroupId)
 			if err != nil {
+				base.Logger.Errorln(err)
 				return err
 			}
 		} else {
 			err = groupDao.UpdateNum(req.GroupId, num)
 			if err != nil {
+				base.Logger.Errorln(err)
 				return err
 			}
 		}
@@ -185,12 +203,14 @@ func (g *groupService) DelGroupMember(req *pb.DelGroupMemberReq) error {
 		return nil
 	})
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	key := cache.GroupUserCache.Key(req.GroupId)
 	err = cache.GroupUserCache.Del(key)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -201,6 +221,7 @@ func (g *groupService) ListGroupMember(groupId uint64) ([]*dao.GroupUser, error)
 	key := cache.GroupUserCache.Key(groupId)
 	u, err := cache.GroupUserCache.Get(key)
 	if err == nil && u != nil {
+		base.Logger.Errorln(err)
 		return u, nil
 	}
 
@@ -208,6 +229,7 @@ func (g *groupService) ListGroupMember(groupId uint64) ([]*dao.GroupUser, error)
 	groupUserDao := &dao.GroupUserDao{DB: db}
 	users, err := groupUserDao.GetAll(groupId)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
@@ -222,10 +244,12 @@ func (g *groupService) IsMember(groupId uint64, username string) (bool, error) {
 	groupUserDao := &dao.GroupUserDao{DB: db}
 	groupUser, err := groupUserDao.GetOne(groupId, username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return false, err
 	}
 
 	if groupUser.IsDeleted == 1 {
+		base.Logger.Errorln("用户不是该群组成员")
 		return false, nil
 	}
 	return true, nil

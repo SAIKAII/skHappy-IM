@@ -18,6 +18,7 @@ func (a *accountService) CreateAccount(dto services.AccountCreatedDTO) error {
 	// 验证帐号是否已存在
 	_, err := a.GetAccount(dto.Username)
 	if err != nil && err != dao.DAO_ERROR_RECORD_NOT_FOUND {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -35,17 +36,20 @@ func (a *accountService) CreateAccount(dto services.AccountCreatedDTO) error {
 	err = db.Transaction(func(tx *gorm.DB) error {
 		err = a.create(user, tx)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
 		err = a.initMsgRecv(dto.Username, tx)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return err
 		}
 
 		return nil
 	})
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -55,6 +59,7 @@ func (a *accountService) CreateAccount(dto services.AccountCreatedDTO) error {
 func (a *accountService) GetAccount(username string) (*services.AccountReturnDTO, error) {
 	user, err := a.getUser(username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
@@ -69,6 +74,7 @@ func (a *accountService) GetAccount(username string) (*services.AccountReturnDTO
 func (a *accountService) GetAccounts(username string) ([]*services.AccountReturnDTO, error) {
 	allUsers, err := services.IRelationshipService.GetAllFriends(username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
@@ -76,6 +82,7 @@ func (a *accountService) GetAccounts(username string) ([]*services.AccountReturn
 	accountDao := dao.UserDao{DB: db}
 	users, err := accountDao.GetAll(allUsers)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
@@ -96,6 +103,7 @@ func (a *accountService) UpdateProfile(dto services.AccountUpdateDTO) error {
 	userDao := dao.UserDao{DB: db}
 	user, err := userDao.GetOne(dto.Username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -106,6 +114,7 @@ func (a *accountService) UpdateProfile(dto services.AccountUpdateDTO) error {
 	user.Sex = dto.Sex
 	err = userDao.UpdateProfile(user)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -115,15 +124,19 @@ func (a *accountService) UpdateProfile(dto services.AccountUpdateDTO) error {
 func (a *accountService) ChangePassword(dto services.ChangePasswordDTO) error {
 	user, err := a.getUser(dto.Username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	res := encrypto.EnCryptoPassword(dto.PrePassword, user.Salt)
 	if res != user.Password {
-		return errors.New("原密码不正确")
+		err := errors.New("原密码不正确")
+		base.Logger.Errorln(err)
+		return err
 	}
 
 	if user.Salt, err = a.generateSalt(); err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -132,6 +145,7 @@ func (a *accountService) ChangePassword(dto services.ChangePasswordDTO) error {
 	accountDao := dao.UserDao{DB: db}
 	err = accountDao.UpdatePassword(user)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -147,6 +161,7 @@ func (a *accountService) getUser(username string) (*dao.User, error) {
 func (a *accountService) create(user *dao.User, db *gorm.DB) error {
 	var err error
 	if user.Salt, err = a.generateSalt(); err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -154,6 +169,7 @@ func (a *accountService) create(user *dao.User, db *gorm.DB) error {
 	accountDao := dao.UserDao{DB: db}
 	err = accountDao.Insert(user)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -173,6 +189,7 @@ func (a *accountService) initMsgRecv(username string, db *gorm.DB) error {
 	msgRecvDao := dao.MsgRecvDao{DB: db}
 	err := msgRecvDao.InsertOne(msgRecv)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 

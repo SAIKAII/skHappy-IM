@@ -20,6 +20,7 @@ func init() {
 	infra.Register(&base.DatabaseStarter{})
 	infra.Register(&base.RedisStarter{})
 	infra.Register(&base.ConnStarter{})
+	infra.Register(&base.LoggerStarter{})
 
 	b.Start()
 }

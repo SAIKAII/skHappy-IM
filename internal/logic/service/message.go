@@ -30,6 +30,7 @@ func (ms *messageService) Send(ctx context.Context, req *pb.SendMessageReq) erro
 	}
 
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -40,11 +41,14 @@ func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq)
 	// 先判断两人是否好友关系
 	isFriend, err := services.IRelationshipService.IsFriend(req.Item.SenderName, req.Item.ReceiverName)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	if !isFriend {
-		return errors.New("两人不是好友关系")
+		err := errors.New("两人不是好友关系")
+		base.Logger.Errorln(err)
+		return err
 	}
 
 	db := base.Database()
@@ -55,6 +59,7 @@ func (ms *messageService) SendToOne(ctx context.Context, req *pb.SendMessageReq)
 	req.Item.SeqId = seqId
 	err = ms.sendToPeer(ctx, req)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -65,15 +70,19 @@ func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageRe
 	// 先判断该用户是否群员
 	isMember, err := services.IGroupService.IsMember(req.Item.GroupId, req.Item.SenderName)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
 	if !isMember {
-		return errors.New("该用户不在群组内")
+		err := errors.New("该用户不在群组内")
+		base.Logger.Errorln(err)
+		return err
 	}
 
 	users, err := services.IGroupService.ListGroupMember(req.Item.GroupId)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -91,6 +100,7 @@ func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageRe
 			if err != nil {
 				if _, ok := err.(*mysql.MySQLError); ok {
 					// TODO 数据库错误，也就是没有正确保存，需要处理
+					base.Logger.Errorln(err)
 				}
 			}
 
@@ -99,6 +109,7 @@ func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageRe
 		return nil
 	})
 	if err != nil {
+		base.Logger.Errorln(err)
 		// 消息保存失败，不发送消息
 		return err
 	}
@@ -114,6 +125,7 @@ func (ms *messageService) SendToGroup(ctx context.Context, req *pb.SendMessageRe
 		err = ms.sendToPeer(ctx, req)
 		if err != nil {
 			// 发送给某个用户失败，但数据库有保存该消息，暂不处理
+			base.Logger.Errorln(err)
 		}
 	}
 
@@ -124,6 +136,7 @@ func (ms *messageService) sendToPeer(ctx context.Context, req *pb.SendMessageReq
 	rpcCli := base.NewRPCCli()
 	rpcConn, err := rpcCli.Dialer(base.USER_ADDR, req.Item.ReceiverName)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 	_, err = pb.NewConnServiceClient(rpcConn).DeliverMessage(ctx, &pb.DeliverMessageReq{
@@ -131,6 +144,7 @@ func (ms *messageService) sendToPeer(ctx context.Context, req *pb.SendMessageReq
 	})
 
 	if err != nil && err != redis.ErrNil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -160,6 +174,7 @@ func (ms *messageService) SendToUser(ctx context.Context, req *pb.DeliverMessage
 	o, _ := proto.Marshal(dmReq)
 	err := coma.PacketToPeer(conn, o)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -172,6 +187,7 @@ func (ms *messageService) saveMessage(req *pb.SendMessageReq, db *gorm.DB) (uint
 	key := cache.SeqCache.Key(req.Item.ReceiverName)
 	seqId, err := cache.SeqCache.Incr(key)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return 0, err
 	}
 
@@ -180,6 +196,7 @@ func (ms *messageService) saveMessage(req *pb.SendMessageReq, db *gorm.DB) (uint
 	if seqId == 1 {
 		msgRecv, err := msgRecvDao.GetOne(req.Item.ReceiverName)
 		if err != nil {
+			base.Logger.Errorln(err)
 			return 0, err
 		}
 
@@ -202,6 +219,7 @@ func (ms *messageService) saveMessage(req *pb.SendMessageReq, db *gorm.DB) (uint
 	messageDao := dao.MessageDao{DB: db}
 	err = messageDao.InsertOne(msg)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return 0, err
 	}
 	recvDao := dao.MsgRecvDao{DB: db}
@@ -210,6 +228,7 @@ func (ms *messageService) saveMessage(req *pb.SendMessageReq, db *gorm.DB) (uint
 		// 事务失败，seqId恢复原来的值
 		seqId, e := cache.SeqCache.Decr(key)
 		if e != nil {
+			base.Logger.Errorln(err)
 			return 0, err
 		}
 		msgRecvDao.UpdateLastSeqId(req.Item.ReceiverName, seqId)

@@ -12,7 +12,6 @@ import (
 	"github.com/SAIKAII/skHappy-IM/services/common"
 	"github.com/golang/protobuf/proto"
 	"github.com/gomodule/redigo/redis"
-	"github.com/sirupsen/logrus"
 )
 
 type ConnData struct {
@@ -38,7 +37,8 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 	var input pb.ConnInput
 	err := proto.Unmarshal(data, &input)
 	if err != nil {
-
+		base.Logger.Errorln(err)
+		// 还需要处理
 	}
 
 	switch input.PackageType {
@@ -55,7 +55,7 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 	}
 	if err != nil {
 		// TODO
-		logrus.Error(err)
+		base.Logger.Errorln(err)
 	}
 }
 
@@ -63,7 +63,9 @@ func (th *TCPHandler) OnMessage(conn *coma.Conn, data []byte) {
 func (th *TCPHandler) OnClose(conn *coma.Conn) error {
 	tmp := conn.Data()
 	if tmp == nil {
-		return errors.New("无该用户的相关连接信息")
+		err := errors.New("无该用户的相关连接信息")
+		base.Logger.Errorln(err)
+		return err
 	}
 	cData := tmp.(*ConnData)
 	rdConn := base.RedisConn()
@@ -140,6 +142,7 @@ func (th *TCPHandler) signInAuth(req *pb.SignInReq) (string, error) {
 	// 验证用户登录是否通过
 	err := services.IAuthService.SignInAuth(req.Username, req.Password)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return "", err
 	}
 
@@ -148,6 +151,7 @@ func (th *TCPHandler) signInAuth(req *pb.SignInReq) (string, error) {
 	meta["username"] = req.Username
 	jwtString, err := jwt.NewJWT(meta)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return "", err
 	}
 
@@ -206,6 +210,7 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 			o, _ := proto.Marshal(output)
 			err := coma.PacketToPeer(conn, o)
 			if err != nil {
+				base.Logger.Errorln(err)
 				return err
 			}
 			totalLen = 0
@@ -225,13 +230,16 @@ func (th *TCPHandler) sync(conn *coma.Conn, data []byte) error {
 func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {
 	tmp := conn.Data()
 	if tmp == nil {
-		return errors.New("无该用户的相关连接信息")
+		err := errors.New("无该用户的相关连接信息")
+		base.Logger.Errorln(err)
+		return err
 	}
 	cData := tmp.(*ConnData)
 	rdConn := base.RedisConn()
 	defer rdConn.Close()
 	exist, err := redis.Bool(rdConn.Do("HEXISTS", base.USER_ADDR, cData.Username))
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -239,6 +247,7 @@ func (th *TCPHandler) heartBeat(conn *coma.Conn, data []byte) error {
 	if !exist {
 		ok, err := redis.Bool(rdConn.Do("HSET", base.USER_ADDR, cData.Username, th.host))
 		if err != nil || !ok {
+			base.Logger.Errorln(err)
 			return err
 		}
 	}

@@ -30,7 +30,7 @@ func (b *BootApplication) init() {
 	logrus.Info("Initializing starters...")
 	for _, v := range GetStarters() {
 		typ := reflect.TypeOf(v)
-		logrus.Info("Initializing type: %s", typ.String())
+		logrus.Infof("Initializing type: %s", typ.String())
 		v.Init(b.starterCtx)
 	}
 }

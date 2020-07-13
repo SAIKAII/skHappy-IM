@@ -24,6 +24,7 @@ func (r *relationshipService) CreateRelationship(userA, userB string) error {
 
 	res, err := r.get(rel.UserA, rel.UserB)
 	if err != nil && err != dao.DAO_ERROR_RECORD_NOT_FOUND {
+		base.Logger.Errorln(err)
 		return err
 	}
 	db := base.Database()
@@ -37,6 +38,7 @@ func (r *relationshipService) CreateRelationship(userA, userB string) error {
 		err = dao.Insert(rel)
 	}
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -53,6 +55,7 @@ func (r *relationshipService) DeleteRelationship(userA, userB string) error {
 	dao := dao.RelationShipDao{DB: db}
 	err := dao.Delete(userA, userB)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return err
 	}
 
@@ -64,6 +67,7 @@ func (r *relationshipService) GetAllFriends(username string) ([]string, error) {
 	relDao := dao.RelationShipDao{DB: db}
 	rels, err := relDao.GetAll(username)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
@@ -88,10 +92,12 @@ func (r *relationshipService) IsFriend(userA, userB string) (bool, error) {
 	relDao := dao.RelationShipDao{DB: db}
 	rel, err := relDao.GetOne(userA, userB)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return false, err
 	}
 
 	if rel.IsDeleted == 1 {
+		base.Logger.Errorln("两人不是好友")
 		return false, nil
 	}
 
@@ -103,6 +109,7 @@ func (r *relationshipService) get(userA, userB string) (*dao.Relationship, error
 	relDao := dao.RelationShipDao{DB: db}
 	res, err := relDao.GetOne(userA, userB)
 	if err != nil {
+		base.Logger.Errorln(err)
 		return nil, err
 	}
 
