@@ -10,8 +10,8 @@ type BootApplication struct {
 }
 
 // 构造启动器
-func New() *BootApplication {
-	a := &BootApplication{starterCtx: StarterContext{}}
+func New(ctx StarterContext) *BootApplication {
+	a := &BootApplication{starterCtx: ctx}
 	return a
 }
 

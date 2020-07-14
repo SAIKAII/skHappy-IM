@@ -1,12 +1,13 @@
 package base
 
 import (
+	"fmt"
+	"github.com/SAIKAII/skHappy-IM/cmd/config"
 	"github.com/SAIKAII/skHappy-IM/infra"
 	"github.com/gomodule/redigo/redis"
 )
 
 var redisDB *redis.Pool
-var addr = "127.0.0.1:6379"
 
 const (
 	USER_ADDR = "user_addr" // 用户长连接到的服务器地址
@@ -21,16 +22,18 @@ type RedisStarter struct {
 }
 
 func (r *RedisStarter) Setup(ctx infra.StarterContext) {
+	host := config.GetString("redis.host")
+	port := config.GetInt("redis.port")
 	redisDB = &redis.Pool{
 		Dial: func() (redis.Conn, error) {
-			return redis.Dial("tcp", addr)
+			return redis.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
 		},
 		TestOnBorrow:    nil,
-		MaxIdle:         3,
-		MaxActive:       20,
-		IdleTimeout:     0,
+		MaxIdle:         config.GetInt("redis.max-idle"),
+		MaxActive:       config.GetInt("redis.max-active"),
+		IdleTimeout:     config.GetDuration("redis.idle-timeout"),
 		Wait:            false,
-		MaxConnLifetime: 0,
+		MaxConnLifetime: config.GetDuration("redis.max-conn-lifetime"),
 	}
 	// 测试是否可以创建连接
 	c := redisDB.Get()

@@ -2,6 +2,7 @@ package base
 
 import (
 	"errors"
+	"github.com/SAIKAII/skHappy-IM/cmd/config"
 	"github.com/SAIKAII/skHappy-IM/infra"
 	"github.com/gomodule/redigo/redis"
 	"google.golang.org/grpc"
@@ -23,8 +24,8 @@ func (r *RPCCliStarter) Setup(ctx infra.StarterContext) {
 	}
 
 	kalv := keepalive.ClientParameters{
-		Time:                10 * time.Second, // 每隔10秒ping一次
-		Timeout:             time.Second,      // 等待2秒ack，若期间无ack，则该连接被断开
+		Time:                config.GetDuration("grpc.keepalive.time") * time.Second,    // 每隔10秒ping一次
+		Timeout:             config.GetDuration("grpc.keepalive.timeout") * time.Second, // 等待2秒ack，若期间无ack，则该连接被断开
 		PermitWithoutStream: true,
 	}
 	rpcCli.dialOpt = append(rpcCli.dialOpt, grpc.WithKeepaliveParams(kalv))

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	coma "github.com/SAIKAII/go-conn-manager"
 	"github.com/SAIKAII/skHappy-IM/apis"
+	"github.com/SAIKAII/skHappy-IM/cmd/config"
 	"github.com/SAIKAII/skHappy-IM/infra"
 	"github.com/SAIKAII/skHappy-IM/infra/base"
 	"github.com/SAIKAII/skHappy-IM/internal/logic/service"
@@ -14,41 +15,28 @@ import (
 	"time"
 )
 
-func init() {
-	b := infra.New()
-
-	infra.Register(&base.DatabaseStarter{})
-	infra.Register(&base.RedisStarter{})
-	infra.Register(&base.ConnStarter{})
-	infra.Register(&base.LoggerStarter{})
-
-	b.Start()
-}
-
 func main() {
-	viper.SetConfigName("config")
-	viper.AddConfigPath("cmd/config/")
-	err := viper.ReadInConfig()
-	if err != nil {
-		panic(fmt.Errorf("Fatal error config file: %s\n", err))
-	}
+	config.Init("cmd/config/")
+
+	// 初始化
+	Init(infra.StarterContext{})
 
 	// 注册RPC Server
 	go apis.StartConnRPCServer(
 		fmt.Sprintf("%s:%d",
-			viper.GetString("tcp-server.host"),
-			viper.GetInt("tcp-server.rpc-port")))
+			config.GetString("tcp-server.host"),
+			config.GetInt("tcp-server.rpc-port")))
 
 	// 启动TCP监控
 	th := service.NewTCPHandler(viper.GetString("tcp-server.host"))
 	epoll := coma.NewEpoll(10 * time.Second)
 	server := coma.NewServer(epoll)
 	go server.Start(
-		viper.GetString("tcp-server.host"),
-		viper.GetInt("tcp-server.long-conn-port"),
-		viper.GetInt("tcp-server.header-len"),
-		viper.GetInt("tcp-server.read-max-len"),
-		viper.GetInt("tcp-server.write-max-len"),
+		config.GetString("tcp-server.host"),
+		config.GetInt("tcp-server.long-conn-port"),
+		config.GetInt("tcp-server.header-len"),
+		config.GetInt("tcp-server.read-max-len"),
+		config.GetInt("tcp-server.write-max-len"),
 		th)
 
 	c := make(chan os.Signal)
@@ -58,4 +46,15 @@ func main() {
 		server.Stop()
 		fmt.Println("Stop")
 	}
+}
+
+func Init(ctx infra.StarterContext) {
+	b := infra.New(ctx)
+
+	infra.Register(&base.DatabaseStarter{})
+	infra.Register(&base.RedisStarter{})
+	infra.Register(&base.ConnStarter{})
+	infra.Register(&base.LoggerStarter{})
+
+	b.Start()
 }

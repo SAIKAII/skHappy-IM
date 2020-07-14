@@ -11,5 +11,26 @@
     "header-len": 2,
     "read-max-len": 512,
     "write-max-len": 512
+  },
+  "mysql": {
+    "user": "root",
+    "password": "123456",
+    "host": "localhost",
+    "port": 3306,
+    "database": "happy_im"
+  },
+  "redis": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "max-idle": 3,
+    "max-active": 20,
+    "idle-timeout": 0,
+    "max-conn-lifetime": 0
+  },
+  "grpc": {
+    "keepalive": {
+      "time": 10,
+      "timeout": 1
+    }
   }
 }
